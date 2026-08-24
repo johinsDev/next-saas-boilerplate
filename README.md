@@ -13,15 +13,20 @@ entitlements above all.
 
 ```bash
 bun install
-bun run typecheck     # 21 packages
+bun run typecheck     # 22 workspaces
 bun run test
+bun run --cwd apps/api dev
 ```
 
-There are no apps yet. See ROADMAP §1.
+`apps/api` is here. `apps/web`, `apps/admin` and the Astro landing are not — see
+ROADMAP §1.
 
 ## Layout
 
 ```
+apps/
+  api         Hono on Cloudflare Workers. Exports `AppType` for `hc<AppType>`.
+
 packages/
   db          Drizzle + libSQL/Turso. Auth, audit, outboxes, notifications, settings.
   auth        Better Auth: Google, magic link, phone OTP, organizations, roles, impersonation.
@@ -54,9 +59,20 @@ internet, and come back — for data it could read in the same process. That is 
 latency, a second serialisation, and a second auth check, for nothing. The API exists
 for clients that are not our server: mobile, and one day third parties.
 
-Mobile uses **Hono RPC** (`hc<AppType>`), which is a type-only import: the bundle gets
-the contract at compile time and ships no client at runtime. That is the whole reason it
-is Hono rather than tRPC, and it should not be "simplified" back.
+Mobile uses **Hono RPC** (`hc<AppType>`), a type-only import: the bundle gets the
+contract at compile time and ships no client at runtime.
+
+```ts
+import { hc } from "hono/client";
+import type { AppType } from "@saas/api";   // type-only: 0 bytes shipped
+
+const api = hc<AppType>(url);
+const res = await api.organizations[":id"].settings.$get({ param: { id } });
+```
+
+`AppType` is inferred from the **route chain** in `apps/api/src/index.ts`. A route
+declared outside the chain still serves traffic but disappears from the client's type,
+and nothing else would notice — `apps/api/src/contract.test.ts` is the check that does.
 
 Services raise `ServiceError` with a code, never a transport error. A `TRPCError` thrown
 from a service is meaningless to a Server Action, to a Trigger.dev task, and to a batch
@@ -79,6 +95,7 @@ and the customer model. Also removed:
 
 - **All migrations.** They encoded the removed schema. Generate a fresh initial one.
 - **The tRPC API package.** Its feature slices were written against tRPC context and the
-  loyalty schema; the reusable ones were rewritten as services.
+  loyalty schema. The reusable ones were rewritten as services, and the transport was
+  rebuilt as Hono. There is no tRPC anywhere in this repo, including in the skills.
 - **The in-app notification service.** The channel abstraction and the tables are here;
   resolving who to notify is app-specific. ROADMAP §4.

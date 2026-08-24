@@ -5,14 +5,14 @@ Nothing here is started — this is the list, not a status board.
 
 ## 1. The apps
 
-The packages are here; the apps that consume them are not. This is the first gap
-because it is what makes everything else demonstrable.
+`apps/api` is here. The rest are not, and this is the first gap because it is what makes
+everything else demonstrable.
 
 - **`apps/web`** — Next.js 16, `cacheComponents: true`, calling `packages/services`
   directly. See `.claude/skills/architecture-guard`.
 - **`apps/admin`** — same, behind the role guard in `@saas/auth`.
-- **`apps/api`** — Hono on Cloudflare Workers, exporting `AppType` for `hc<AppType>`.
-  Thin: it parses, authenticates, calls a service, serialises.
+- ~~**`apps/api`**~~ — done. Hono on Cloudflare Workers, exporting `AppType`. Still needs
+  auth middleware, rate limiting and the observability wiring the packages already provide.
 - **Astro landing** — static marketing site, its own deploy, sharing only the design
   tokens. Deliberately not Next: a landing page should not carry a React runtime.
 
