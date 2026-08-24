@@ -40,7 +40,7 @@ function createStrategy(
  *     logger: log,
  *   });
  *
- *   // per request, in the tRPC route handler:
+ *   // per request, in the route handler:
  *   const binding = flags.forRequest({ distinctId: resolveDistinctId(ctx) });
  *   return { ...ctx, flags: binding };
  *

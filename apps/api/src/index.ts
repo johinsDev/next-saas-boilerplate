@@ -39,8 +39,9 @@ app.onError((error, c) => {
  * const res = await api.organizations[":id"].settings.$get({ param: { id } });
  * ```
  *
- * That is the whole reason this is Hono rather than tRPC: the mobile bundle
- * gets the contract at compile time and ships no client at runtime.
+ * The contract is a **type-only** import: the mobile bundle gets it at compile
+ * time and ships nothing at runtime. Never replace this with an RPC layer that
+ * ships a runtime client — on a React Native bundle that cost is the decision.
  */
 const routes = app
   .get("/health", (c) => c.json({ ok: true, environment: c.env.ENVIRONMENT }))

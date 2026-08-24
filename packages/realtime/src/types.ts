@@ -1,7 +1,7 @@
 /**
  * The party kinds that exist today (or are documented as stubs in the
  * `realtime` skill). Adding a new party = extend this union AND add a
- * `verifyXxxAccess()` rule in the tRPC ticket service.
+ * `verifyXxxAccess()` rule in the ticket service.
  */
 export type CustomerRoom = `customer:${string}`;
 export type OrgRoom = `org:${string}`;

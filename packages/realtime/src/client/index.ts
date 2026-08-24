@@ -50,7 +50,7 @@ export function usePartyRoom<E extends { event: string } = RealtimeEvent>(
   const [lastEvent, setLastEvent] = useState<E | null>(null);
   const onEventRef = useRef(options.onEvent);
   onEventRef.current = options.onEvent;
-  // Stabilize getTicket — callers typically build it inline from a tRPC
+  // Stabilize getTicket — callers typically build it inline from an API
   // mutation that returns a new identity per render, which would
   // otherwise re-run the effect on every render and re-issue tickets in
   // a tight loop.

@@ -74,10 +74,10 @@ const res = await api.organizations[":id"].settings.$get({ param: { id } });
 declared outside the chain still serves traffic but disappears from the client's type,
 and nothing else would notice — `apps/api/src/contract.test.ts` is the check that does.
 
-Services raise `ServiceError` with a code, never a transport error. A `TRPCError` thrown
-from a service is meaningless to a Server Action, to a Trigger.dev task, and to a batch
-job — all of which call the same function with no HTTP in sight. The edge maps the code
-to a status.
+Services raise `ServiceError` with a code, never a transport error. A transport error
+thrown from a service is meaningless to a Server Action, to a Trigger.dev task, and to a
+batch job — all of which call the same function with no HTTP in sight. The edge maps the
+code to a status.
 
 `.claude/skills/architecture-guard` is the authority on all of this.
 
@@ -94,8 +94,8 @@ The loyalty domain: stamps, points, rewards, promotions, campaigns, products, st
 and the customer model. Also removed:
 
 - **All migrations.** They encoded the removed schema. Generate a fresh initial one.
-- **The tRPC API package.** Its feature slices were written against tRPC context and the
-  loyalty schema. The reusable ones were rewritten as services, and the transport was
-  rebuilt as Hono. There is no tRPC anywhere in this repo, including in the skills.
+- **The old API package.** Its feature slices were written against a different
+  transport's request context and the loyalty schema. The reusable ones were rewritten as
+  services, and the transport was rebuilt on Hono.
 - **The in-app notification service.** The channel abstraction and the tables are here;
   resolving who to notify is app-specific. ROADMAP §4.

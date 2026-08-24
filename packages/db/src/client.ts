@@ -22,7 +22,7 @@ let instance: Db | undefined;
  * Build a **fresh** libSQL/drizzle client. Cloudflare Workers bind an I/O object
  * to the request that created it, so a module singleton shared across concurrent
  * requests gets canceled ("cross-request promise resolution"). The per-request
- * tRPC context calls this so each request owns its client; long-lived runtimes
+ * The API's per-request middleware calls this so each request owns its client; long-lived runtimes
  * (Node scripts, jobs) keep using the {@link db} singleton below.
  */
 export type DbConfig = {

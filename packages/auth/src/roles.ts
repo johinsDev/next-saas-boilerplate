@@ -1,7 +1,7 @@
 /**
  * Canonical role model for the next-saas-boilerplate monorepo.
  *
- * Every authorization decision (tRPC procedures, layouts, /api handlers,
+ * Every authorization decision (route handlers, layouts, /api handlers,
  * UI conditional rendering) reads from this single source of truth.
  *
  * Storage: `member.role` in @saas/db. The column is `text` so the

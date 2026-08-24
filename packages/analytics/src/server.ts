@@ -41,7 +41,7 @@ function createStrategy(
  *     logger: log,
  *   });
  *
- *   // per request, in the tRPC route handler:
+ *   // per request, in the route handler:
  *   const binding = analytics.forRequest({
  *     distinctId: resolveDistinctId(ctx),
  *     baseProperties: { app: "web", environment, locale },

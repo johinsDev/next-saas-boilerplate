@@ -76,7 +76,7 @@ export interface PostHogProviderConfig {
 export type ProviderConfig = NullProviderConfig | PostHogProviderConfig;
 
 /**
- * Per-request shape bound on the tRPC ctx. `distinctId` and base
+ * Per-request shape bound on the Hono context. `distinctId` and base
  * properties are pre-resolved so routers just write
  * `ctx.analytics.capture("subscription.started", { cardId })`.
  */

@@ -55,7 +55,7 @@ export interface PostHogProviderConfig {
 export type ProviderConfig = NullProviderConfig | PostHogProviderConfig;
 
 /**
- * Per-request shape bound on the tRPC ctx. `distinctId` is pre-resolved
+ * Per-request shape bound on the Hono context. `distinctId` is pre-resolved
  * so routers just call `await ctx.flags?.isEnabled("new-checkout-flow")`.
  */
 export interface FlagsBinding {

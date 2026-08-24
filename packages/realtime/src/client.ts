@@ -21,7 +21,7 @@ export interface RealtimeClientConfig {
 }
 
 /**
- * Server-side publisher. Called from Next route handlers, tRPC
+ * Server-side publisher. Called from Next route handlers, API routes
  * mutations, and Trigger.dev tasks to broadcast events into a room.
  *
  * Wire flow:

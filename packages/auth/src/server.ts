@@ -177,7 +177,7 @@ export function createAuth(
     ...(Object.keys(advanced).length > 0 && { advanced }),
     // Skip the session DB lookup on most requests: Better Auth caches the
     // resolved session + user in a **signed cookie** for `maxAge` seconds, so
-    // `getSession` — run on every tRPC request (`createContext`) and the RSC
+    // `getSession` — run on every API request (the per-request middleware) and the RSC
     // auth-guard — validates from the cookie instead of hitting Turso. This is
     // the dominant per-request/per-navigation auth cost. `maxAge` also bounds how
     // long a ban / session-revocation (Empleados "Inhabilitado") takes to bite,
