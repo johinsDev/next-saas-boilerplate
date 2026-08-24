@@ -38,11 +38,11 @@ session, and already has the database binding.
 The API exists for **clients that are not our server**. That is mobile, and one day third
 parties. It is not a service bus for our own render.
 
-### Why Hono RPC and not tRPC
+### Why Hono RPC and not Hono RPC
 
 `hc<AppType>` is a **type-only** import. The mobile bundle gets the contract at compile
-time and ships nothing at runtime. tRPC ships a client. On a React Native bundle that
-difference is the reason for the choice — do not "simplify" it back to tRPC.
+time and ships nothing at runtime. Hono RPC ships a client. On a React Native bundle that
+difference is the reason for the choice — do not "simplify" it back to Hono RPC.
 
 ## The layers
 
@@ -54,8 +54,12 @@ difference is the reason for the choice — do not "simplify" it back to tRPC.
 | **queries** | `apps/<app>/src/features/<domain>/<domain>-queries.ts` | services | Be imported by a Client Component |
 | **actions** | `apps/<app>/src/features/<domain>/<domain>-actions.ts` | services | Be called by `queryFn` |
 
-`packages/services` carries `import "server-only"` at its entry. That turns "a client
-component imported a service" from a runtime data leak into a build error.
+`packages/services` deliberately does **not** carry `import "server-only"`. That guard is a
+Next.js construct and it throws anywhere React is not — including inside the Worker and in a
+plain test run. It belongs one layer up, in each app's `<domain>-queries.ts`, which is where
+a client/server boundary actually exists. Put it there and "a client component imported a
+service" is a build error instead of a runtime data leak; put it in the package and the API
+stops booting.
 
 ## Callers, in detail
 
@@ -83,22 +87,25 @@ which is a thin wrapper over the same service.
 
 ```ts
 import { hc } from "hono/client";
-import type { AppType } from "@saas/api-contract";   // type-only
+import type { AppType } from "@saas/api";   // type-only: 0 bytes shipped
 
 const api = hc<AppType>(process.env.EXPO_PUBLIC_API_URL!);
+const res = await api.organizations[":id"].settings.$get({ param: { id } });
 ```
+
+`AppType` is inferred from the **route chain** in `apps/api/src/index.ts`. A route declared
+outside that chain still serves traffic but vanishes from the client's type, and nothing
+else would notice — `apps/api/src/contract.test.ts` is the check that does.
 
 **The Hono API itself** — a thin transport shell. It parses, authenticates, calls a
 service, and serialises. Business rules that live in a route handler are unreachable from
 web and admin, which is how two implementations of the same rule start.
 
-## Engine boundary
+## One database client per request
 
-`packages/game-core` is pure TypeScript with **zero runtime dependencies**. It never
-imports a database, a logger, a framework, or an environment variable. That is what lets
-the same solver run in the Next server, in the mobile bundle, and in the offline batch
-pipeline that builds cases. Keep it that way: if a change to `game-core` needs I/O, the
-I/O belongs in a service that calls it.
+Workers bind I/O to the request that opened it, so `createDb(config)` takes its
+configuration rather than reading `process.env` at module scope. A module-level client
+works in development and then fails in production the moment a second request reuses it.
 
 ## Red flags
 
@@ -110,7 +117,6 @@ I/O belongs in a service that calls it.
 | `import { hc }` without `import type` for the contract | You just shipped an RPC client to the mobile bundle. |
 | A Client Component importing anything from `packages/services` | `server-only` will fail the build. Go through a route handler. |
 | `queryFn: () => someServerAction()` | Server Functions are not a fetch transport. |
-| An `import` from `packages/game-core` that pulls in a dependency | The engine has none. Keep it pure. |
 
 ## When the rule genuinely does not fit
 

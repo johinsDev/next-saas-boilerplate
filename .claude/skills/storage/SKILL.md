@@ -3,16 +3,9 @@ name: storage
 description: Upload + serve files in the next-saas-boilerplate monorepo via `@saas/storage`. Three providers (memory / local / r2) with presigned URLs everywhere. Use when adding a new disk, picking a provider per env, debugging a 401/403 on upload, wiring R2 in Cloudflare, or hooking the storage channel into a feature.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # storage — provider-agnostic file storage
 
@@ -26,7 +19,7 @@ For the **UI side** (Dropzone + FileUpload + react-hook-form), see `.claude/skil
 
 | Need | Reach for |
 | --- | --- |
-| User uploads a file (avatar, document, photo) | This skill — `useFileUpload` + tRPC `storage.createUploadUrl` |
+| User uploads a file (avatar, document, photo) | This skill — `useFileUpload` + Hono RPC `storage.createUploadUrl` |
 | Server writes a file once (generated report, backup) | `storage.disk().put(key, body)` directly |
 | Display an existing file in the UI | `storage.disk().getDownloadUrl(key)` — picks public/signed automatically |
 | One-off temp file in a Trigger.dev task | Memory disk works; or pipe straight to R2 if it needs to persist |
@@ -46,7 +39,7 @@ For the **UI side** (Dropzone + FileUpload + react-hook-form), see `.claude/skil
 | `FakeDisk` | `packages/storage/src/fake-disk.ts` |
 | HMAC token sign/verify | `packages/storage/src/token.ts` |
 | Unit tests | `packages/storage/src/__tests__/` |
-| tRPC feature | `packages/api/src/features/storage/` |
+| Hono RPC feature | `packages/api/src/features/storage/` |
 | Web bootstrap | `apps/web/src/lib/storage.ts` |
 | Admin bootstrap | `apps/admin/src/lib/storage.ts` |
 | Route handlers | `apps/{web,admin}/app/api/storage/{upload,serve}/route.ts` |
@@ -72,13 +65,13 @@ Override with `STORAGE_PROVIDER=memory|local|r2`. When R2 is selected, the four 
 
 ```
 ┌─ Browser ─────────────────────────────────────────────────────────┐
-│ 1. trpc.storage.createUploadUrl.mutate({ fileName, contentType }) │
+│ 1. api.storage.createUploadUrl.$post({ fileName, contentType }) │
 │            ↓                                                      │
 │ 2. Receives { url, key, headers, expiresAt }                      │
 │            ↓                                                      │
 │ 3. XHR PUT  url  with the raw file body + headers                 │
 │            ↓ progress events → UI                                 │
-│ 4. trpc.storage.createDownloadUrl.mutate({ key })                 │
+│ 4. api.storage.createDownloadUrl.$post({ key })                 │
 │            ↓                                                      │
 │ 5. Receives { url } — store this in your form state               │
 └────────────────────────────────────────────────────────────────────┘
@@ -121,11 +114,11 @@ const { body, file } = await storage.disk().get("reports/2025-q1.pdf");
 const url = await storage.disk().getDownloadUrl("reports/2025-q1.pdf", 600);
 ```
 
-For user uploads, **don't** call `put` server-side. Use the presigned URL flow via tRPC (see the file-upload skill).
+For user uploads, **don't** call `put` server-side. Use the presigned URL flow via Hono RPC (see the file-upload skill).
 
 ---
 
-## API surface (tRPC)
+## API surface (Hono RPC)
 
 Under `api.storage.*`:
 
@@ -136,7 +129,7 @@ storage.delete.mutate({ key, disk? });
 storage.list.query({ prefix?, limit?, cursor?, disk? });
 ```
 
-All `protectedProcedure`. The server slugifies + timestamps the filename → key so callers can't trample each other's namespaces by submitting the same name.
+All `an authenticated route`. The server slugifies + timestamps the filename → key so callers can't trample each other's namespaces by submitting the same name.
 
 ---
 

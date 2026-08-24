@@ -3,16 +3,9 @@ name: ui-motion
 description: Animate customer screens consistently — staggered fade-up entrances (useFadeUp/FadeUp), shared-element motion (framer-motion layoutId), reduced-motion, count-up and confetti. Read before adding any UI animation in apps/web.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # ui-motion — animating the customer PWA
 

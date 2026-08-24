@@ -3,16 +3,9 @@ name: better-stack
 description: Operate Better Stack (logs, uptime, status pages, alerts, dashboards) for the next-saas-boilerplate monorepo through the Better Stack MCP. Use when creating, modifying, pausing or deleting any BS resource, when wiring a new app to the logs sink, or when troubleshooting auth.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # Better Stack — operations cookbook
 
@@ -198,7 +191,7 @@ retrying.
 ### What we monitor
 - **Web (PWA)**: `https://<vercel-slug-web>.vercel.app/api/health` (and prod URL once LOY-43 lands).
 - **Admin**: `https://<vercel-slug-admin>.vercel.app/api/health` — this one **also** pings the DB internally and returns 503 on failure, so DB outages page us via this monitor.
-- **API**: alias of admin's health for now (one route serves tRPC + auth + status). Split when API gets its own deploy.
+- **API**: alias of admin's health for now (one route serves Hono RPC + auth + status). Split when API gets its own deploy.
 - **Status page** (later): once published, monitor it too.
 
 ### Conventions
@@ -348,7 +341,7 @@ Steps (always read the per-tool instructions first — schema is large):
 
 ### Conventions
 - Live in dashboard `next-saas-boilerplate: alerts` (one place to scan).
-- Naming: `<service>: <signal>` — `web: 5xx surge`, `admin: tRPC slow`, `jobs: failed retries`.
+- Naming: `<service>: <signal>` — `web: 5xx surge`, `admin: Hono RPC slow`, `jobs: failed retries`.
 - Always include a runbook link in the alert description.
 
 ---

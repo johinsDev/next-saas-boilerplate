@@ -1,21 +1,14 @@
 ---
 name: nextjs-data-fetching-patterns
-description: Decision guide for choosing the right data-fetching / caching / state pattern in a Next.js App Router (RSC) app — server cache vs React Query vs promise+use() vs URL/nuqs vs draft Zustand vs mutations/optimistic, including tRPC. Use when starting a feature or planning a refactor and you need to pick the pattern that fits before writing code.
+description: Decision guide for choosing the right data-fetching / caching / state pattern in a Next.js App Router (RSC) app — server cache vs React Query vs promise+use() vs URL/nuqs vs draft Zustand vs mutations/optimistic, including Hono RPC. Use when starting a feature or planning a refactor and you need to pick the pattern that fits before writing code.
 auto_invoke: false
 tools: Read, Grep, Glob, Edit, Write, Bash, WebFetch
 version: 1.1.0
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # Next.js Data-Fetching & State Pattern Decision Guide
 
@@ -28,7 +21,7 @@ expensive to undo.
 > Companion skill: **`next-cache-components`** (vercel-labs/next-skills) is the
 > deep dive on the *server* layer only — `use cache`, `cacheLife`, `cacheTag`,
 > `revalidateTag`, PPR. It does **not** cover the client layer (React Query, SWR,
-> nuqs, Zustand, mutations/optimistic, tRPC). This skill is the **broader
+> nuqs, Zustand, mutations/optimistic, Hono RPC). This skill is the **broader
 > decision framework** that includes both layers and tells you *which* to reach
 > for. Defer to that skill for the mechanics of `use cache`/PPR.
 
@@ -198,25 +191,41 @@ RQ for dependent data; simple URL-shareable filtering/pagination → nuqs.
 
 ---
 
-## Step 4 — tRPC maps onto the SAME patterns (it doesn't add a new one)
+## Step 4 — the typed API does not change any of this
 
-tRPC = a **typed layer**: client hooks are **React Query under the hood**; a
-**server caller** lets you call procedures directly in RSC (no HTTP).
+In this repo the web and admin apps **do not call the API**. They import
+`@saas/services` and run it in the same process, so every pattern above applies
+unchanged: a service call is just an async function.
 
-| Pattern above | tRPC form |
+The Hono API exists for callers that are not our server — mobile today, third
+parties later. Those callers get `hc<AppType>`, a **type-only** import that
+gives them the contract at compile time and ships no client at runtime.
+
+```ts
+import { hc } from "hono/client";
+import type { AppType } from "@saas/api";   // type-only: 0 bytes shipped
+
+const api = hc<AppType>(process.env.EXPO_PUBLIC_API_URL!);
+const res = await api.organizations[":id"].settings.$get({ param: { id } });
+const settings = await res.json();          // typed from the route
+```
+
+| Pattern above | How it looks here |
 |---|---|
-| E. prefetch + hydrate | `trpc.x.prefetch(input)` (server) → `HydrationBoundary` → `trpc.x.useQuery(input)` |
-| D. promise + `use()` | server caller: `const p = trpc.x(input)` (no await) → `use(p)` in client |
-| A. server `await` + `cache()` | the server caller **is** your server function; wrap in `cache()` |
-| F. client `useQuery` | `trpc.x.useQuery(input, { placeholderData: keepPreviousData })` |
-| G. mutation | `trpc.x.useMutation({ onMutate })` |
+| A. server `await` | `await getThing(db, id)` — a service call, no HTTP |
+| D. promise + `use()` | pass the un-awaited service promise into a Client Component |
+| E. prefetch + hydrate | prefetch by calling the service on the server, hydrate as usual |
+| F. client `useQuery` | `queryFn` hits a Next route handler under `/api/*` |
+| G. mutation | a Server Action calling the service, then `updateTag()` |
 
-**tRPC adds:** end-to-end types, auto query keys (the procedure path *is* the key),
-invalidate-by-path, request **batching** (many client calls → 1 HTTP). **Does NOT
-change:** the Next Data Cache (still `use cache` separately), `void`/`await`,
-URL-vs-client-state decisions. **Cost:** procedures must live in a TS server — if
-your BE is a separate service (REST), tRPC means a **BFF layer** in Next that
-calls it; weigh the type-safety win against that hop.
+**What is different from an RPC framework:** there are no automatic query keys and
+no request batching, because there are no requests. You write the query key. In
+exchange there is no hop, no second serialisation and no second auth check.
+
+**On the client, never** call a Server Function from `queryFn` (Server Functions
+are sequential and are not a fetch transport), and never call the external API
+from our own web app's browser — it is a different origin with a different auth
+shape.
 
 ---
 
@@ -278,7 +287,7 @@ calls it; weigh the type-safety win against that hop.
 
 1. List each data/state piece the feature needs.
 2. Run Step 1 axes on each → land on a row of the Step 3 table.
-3. If on tRPC, translate via Step 4.
+3. If on Hono RPC, translate via Step 4.
 4. For `use cache`/PPR mechanics, consult the **next-cache-components** skill.
 5. Keep server vs client islands explicit; default to server, opt into client.
 
@@ -295,7 +304,7 @@ a route guard, or adding a cache under the flag.
 
 > Under `cacheComponents`, **any access to dynamic data** — `cookies()`, `headers()`,
 > `searchParams`, `params` (incl. `useParams`/`useSearchParams` in a client component during
-> prerender), or an uncached `fetch`/`await trpc()` — is allowed **only inside a `<Suspense>`
+> prerender), or an uncached `fetch`/`await the API()` — is allowed **only inside a `<Suspense>`
 > boundary or a `"use cache"` function**. Anything else fails the build:
 > *"Uncached data was accessed outside of `<Suspense>`."*
 
@@ -304,35 +313,34 @@ one per page (it exits on the first per page — re-run after each fix). It runs
 (env present). Never commit a red build; iterate build → fix → build, commit only when green.
 `use cache` REQUIRES this flag.
 
-## `use cache` is cookie-blind — this splits your whole caching strategy
+## `use cache` is cookie-blind — this splits your caching strategy
 
-`"use cache"` forbids dynamic APIs **inside** it. Our RSC tRPC caller
-(`apps/*/src/lib/trpc/server.ts`) reads `headers()` to forward the session cookie. Therefore:
+`"use cache"` forbids dynamic APIs **inside** it: no `headers()`, no `cookies()`.
+That draws the line for you.
 
-- **Public procedure** (no auth) → make a **cookie-free** client (own `createTRPCUntypedClient`,
-  no cookie header) → wrap in `use cache` + `cacheLife` + `cacheTag`. ✅ `getBranding`
-  (`settings.branding`) does this — it's what lets the root layout prerender.
-- **Protected procedure** (needs the cookie for authz) → **cannot** be `use cache`. Removing the
-  cookie breaks the Worker's authz; keeping it is illegal inside `use cache`. → Use the
-  **Worker-side cache** instead (`cachedRead(ctx, key, ttl, factory)` in `packages/api/src/trpc.ts`;
-  key MUST include org + scope/filter/period). `navCounts`, the dashboard aggregates, and the
-  `adminList` reads are all protected → Worker-cached, never `use cache`.
+- **Public reads** (no per-user authorization) → wrap the service call in
+  `use cache` + `cacheLife` + `cacheTag`. Branding and settings do this, and it
+  is what lets the root layout prerender.
+- **Protected reads** (authorization depends on the session) → **cannot** be
+  `use cache`. Resolve the session *outside* the cached function and pass the
+  scope in as an argument: `getDashboard(organizationId, period)` is cacheable,
+  `getDashboard()` reading `headers()` internally is not. If the scope is too
+  wide to key on, cache in `@saas/cache` instead, with the organization in the
+  key.
 
-**The four cache layers (only two survive a navigation server-side, one client-side):**
+**The cache layers (only two survive a navigation server-side, one client-side):**
 
 | Layer | Lives | Survives navigation? | True recycle (0 refetch)? |
 | --- | --- | --- | --- |
 | React `cache()` | one request | ❌ dedup intra-render only | no |
-| **Next Data Cache** (`use cache`) | cross-request, by args + tag | ✅ | ✅ — but public data only |
-| **Worker cache** (`cachedRead`) | server, own key | ✅ | ~5ms (skips Turso, **still a Vercel→Worker hop**) |
+| **Next Data Cache** (`use cache`) | cross-request, by args + tag | ✅ | ✅ — public data only |
+| **`@saas/cache`** (Redis/Upstash) | server, own key | ✅ | ~5ms, skips the database |
 | **react-query** | browser | ✅ | ✅ 0ms, but +JS, consumer becomes client |
 
-`getMe()`/`loadStoreScope()` use `cache()` → they **dedupe within a request** but do NOT recycle
-across navigations. For cross-navigation recycling of protected list data, the honest options are
-Worker-cache (cheap hop, keeps RSC) or react-query (0ms, +JS) — pick per the "server tables vs
-react-query" trade. A cookie-free **internal-token BFF** would unlock `use cache` for protected
-reads too, at the cost of a service-auth surface — only worth it for a public-facing marketplace,
-not an internal CRM.
+Session helpers wrapped in `cache()` **dedupe within a request** but do not recycle
+across navigations. For cross-navigation recycling of protected list data the
+honest options are `@saas/cache` (keeps the component a Server Component) or
+react-query (0ms, more JS) — pick per the "server tables vs react-query" trade.
 
 ## `cacheTag` is for INVALIDATION, not keying
 
@@ -409,7 +417,7 @@ against the real components. (oxlint forbids array-index keys — use stable str
 
 - `export const dynamic`/`runtime` route-segment config → **rejected** under the flag; delete it
   (redundant — dynamic is inferred from the reads).
-- `getBranding` as `use cache` while it calls `trpc()` → throws (reads `headers()`); give it a
+- `getBranding` as `use cache` while it calls `the API()` → throws (reads `headers()`); give it a
   **cookie-free** client first.
 - Root layout reading `cookies()` for `<html lang>` → breaks `/_not-found` prerender; use a static
   default locale (the URL prefix still localizes).

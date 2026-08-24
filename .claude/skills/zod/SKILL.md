@@ -1,30 +1,23 @@
 ---
 name: zod
-description: How we validate in the next-saas-boilerplate monorepo — Zod is the single source of truth for shapes at every boundary (API/tRPC inputs, env, forms, search params, realtime/job payloads). Use when adding or refactoring a schema, deciding parse vs safeParse, sharing a schema between a form and a tRPC procedure, modeling unions/refinements/transforms, validating env, or wiring `zodResolver` into a form. Pairs with the `react-hook-form` and `api-filters` skills.
+description: How we validate in the next-saas-boilerplate monorepo — Zod is the single source of truth for shapes at every boundary (API/the validated inputs, env, forms, search params, realtime/job payloads). Use when adding or refactoring a schema, deciding parse vs safeParse, sharing a schema between a form and a route handler, modeling unions/refinements/transforms, validating env, or wiring `zodResolver` into a form. Pairs with the `react-hook-form` and `api-filters` skills.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # zod
 
 Zod (`^3.24`) is the **one** way we describe and validate data shapes. The rule of thumb: **define the schema once, `z.infer` the type, reuse the schema at every boundary it crosses.** Never hand-write a TS interface next to a Zod schema — infer it.
 
-We validate at the edges (untrusted input) and trust types inside. Edges in this repo: tRPC procedure inputs, `env.ts`, form submits, URL/search params, and Trigger.dev/realtime payloads that cross a wire.
+We validate at the edges (untrusted input) and trust types inside. Edges in this repo: route handler inputs, `env.ts`, form submits, URL/search params, and Trigger.dev/realtime payloads that cross a wire.
 
 ## Where Zod already lives
 
 | What | Where |
 | --- | --- |
-| tRPC input schemas (one per feature) | `packages/api/src/features/<name>/schemas.ts` |
+| the validated input schemas (one per feature) | `packages/api/src/features/<name>/schemas.ts` |
 | Env validation (server + client) | `apps/{web,admin}/src/env.ts`, `packages/jobs/env.ts` (`@t3-oss/env-*` over Zod) |
 | Message/content schemas in providers | `packages/{sms,push,email,whatsapp}/src/schemas.ts` |
 | Form schemas (with `zodResolver`) | colocated with the form — see the `react-hook-form` skill |
@@ -41,10 +34,10 @@ export type SendInput = z.infer<typeof sendInputSchema>;
 ```
 
 **2. `safeParse` at boundaries you don't control; `parse` only when a throw is the right failure.**
-- tRPC does the parse for you (pass the schema to `.input()`) — never re-validate inside the resolver.
+- Hono RPC does the parse for you (pass the schema to `.input()`) — never re-validate inside the resolver.
 - For our own boundary checks (a webhook body, a job payload), prefer `safeParse` and handle `!result.success` explicitly. Reserve `.parse()` for "this is a programmer error if it fails".
 
-**3. One schema, both sides.** A form and the tRPC procedure that receives it should share the same schema (export it from the feature's `schemas.ts`, import it in the form for `zodResolver`). That's how the client and server agree on validation with zero drift.
+**3. One schema, both sides.** A form and the route handler that receives it should share the same schema (export it from the feature's `schemas.ts`, import it in the form for `zodResolver`). That's how the client and server agree on validation with zero drift.
 
 **4. `z.coerce` for string-origin inputs** (URL/search params via `nuqs`, env numbers, form number fields):
 ```ts
@@ -79,7 +72,7 @@ schema.superRefine((val, ctx) => {
 - **`.parse()` throws** — an unhandled throw at a boundary is a 500. Use `safeParse` unless you want the throw.
 - **Optional vs nullable vs default**: `.optional()` (`undefined`), `.nullable()` (`null`), `.default(x)` (fills `undefined`). DB columns that are nullable → `.nullable()`; query params → `.optional()` or `.default()`.
 - **`z.string().uuid()` is wrong for Better Auth ids** — they're not UUIDs. Use `z.string().min(1)` for `user.id`/`customer.id`; reserve `.uuid()` for our `crypto.randomUUID()` rows (see the `notifications.send` history).
-- **Don't validate twice.** If tRPC validated the input, the service/repository trusts it.
+- **Don't validate twice.** If Hono RPC validated the input, the service/repository trusts it.
 
 ## Common tasks
 
@@ -94,4 +87,4 @@ schema.superRefine((val, ctx) => {
 
 ## Why one schema everywhere
 
-Drift between a TS type, a form's validation, and a server's validation is where bugs live. Zod collapses all three into one declaration: the schema validates at runtime, `z.infer` gives the compile-time type, and the same object travels from the form to the tRPC input. Change the shape once, everything follows.
+Drift between a TS type, a form's validation, and a server's validation is where bugs live. Zod collapses all three into one declaration: the schema validates at runtime, `z.infer` gives the compile-time type, and the same object travels from the form to the the validated input. Change the shape once, everything follows.

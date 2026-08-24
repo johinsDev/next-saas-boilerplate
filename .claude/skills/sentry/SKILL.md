@@ -1,18 +1,11 @@
 ---
 name: sentry
-description: Error tracking for the next-saas-boilerplate monorepo via Sentry (@sentry/nextjs) in apps/web + apps/admin — client + server + edge exception capture, source-map symbolication, release tracking. Better Stack stays the system of record for logs/perf/uptime; Sentry owns exceptions. Use when adding/debugging error capture, wiring the tRPC capture hook, creating a Sentry project, tuning sampling, or onboarding a teammate to "where do crashes go".
+description: Error tracking for the next-saas-boilerplate monorepo via Sentry (@sentry/nextjs) in apps/web + apps/admin — client + server + edge exception capture, source-map symbolication, release tracking. Better Stack stays the system of record for logs/perf/uptime; Sentry owns exceptions. Use when adding/debugging error capture, wiring the Hono RPC capture hook, creating a Sentry project, tuning sampling, or onboarding a teammate to "where do crashes go".
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # Sentry — error tracking
 
@@ -20,15 +13,15 @@ Sentry captures **exceptions** (frontend + backend) for `apps/web` and
 `apps/admin`: grouped, source-mapped, tagged by release + environment. It runs
 **alongside** Better Stack — not instead of it. Division of labour:
 
-- **Better Stack** (`@saas/log`) — structured operational logs, tRPC perf,
+- **Better Stack** (`@saas/log`) — structured operational logs, Hono RPC perf,
   uptime, dashboards, alerts. The system of record.
 - **Sentry** — unhandled exceptions, client crashes, grouped issues with
   readable stacks. The thing Better Stack Logs can't do (no client capture, no
   symbolication).
 
 **Do not double-route.** `log.error(...)` keeps going to Better Stack; Sentry's
-SDK owns exceptions via its own handlers. The one explicit bridge is the tRPC
-`captureError` hook (below), because tRPC swallows thrown errors so they never
+SDK owns exceptions via its own handlers. The one explicit bridge is the Hono RPC
+`captureError` hook (below), because Hono RPC swallows thrown errors so they never
 reach Sentry's automatic instrumentation.
 
 ## Gating: enabled only when the DSN is set
@@ -46,7 +39,7 @@ locally to test.
 | `instrumentation-client.ts` | Inits the **browser** SDK (Next 15.3+/16 replaces `sentry.client.config.ts`). Exports `onRouterTransitionStart` for navigation instrumentation. |
 | `app/global-error.tsx` | Root error boundary. React swallows render errors into boundaries (they never hit `window.onerror`), so it calls `Sentry.captureException` by hand. Renders its own `<html>`; copy is intentionally minimal and **not** localized (no next-intl at this level). |
 | `next.config.ts` | Wrapped **outermost** by `withSentryConfig(...)` (over Serwist + next-intl). Uploads source maps at build time; sets the `/monitoring` tunnel route. |
-| `src/lib/sentry.ts` | `captureError` — the app's binding for the tRPC hook (see below). |
+| `src/lib/sentry.ts` | `captureError` — the app's binding for the Hono RPC hook (see below). |
 
 Config is **errors-only** to start: `tracesSampleRate: 0`,
 `replaysSessionSampleRate: 0`, `replaysOnErrorSampleRate: 0`. Perf lives in
@@ -65,31 +58,31 @@ free-tier quota — 5k errors/mo).
 Infisical routing: `/web` and `/admin`, env `preview` + `prod`. Validated in
 `apps/{web,admin}/src/env.ts` (all optional). See the `env-deploy` skill.
 
-## tRPC server-side capture (the one manual bridge)
+## the Hono app-side capture (the one manual bridge)
 
-tRPC **catches** errors thrown in procedures and formats them — they never
+Hono RPC **catches** errors thrown in procedures and formats them — they never
 bubble to Next's `onRequestError`. So `@saas/api` carries an optional,
 SDK-agnostic `captureError` binding on the context (like `analytics` / `flags`):
 
-- `packages/api/src/trpc.ts` — `withErrorCapture` middleware (outermost on
-  `baseProcedure`) calls `ctx.captureError(error, { userId, path, type })` for
+- `apps/api/src/lib/` — `withErrorCapture` middleware (outermost on
+  `the base route`) calls `ctx.captureError(error, { userId, path, type })` for
   **unexpected** errors only. Expected 4xx (`BAD_REQUEST`, `UNAUTHORIZED`,
   `FORBIDDEN`, `NOT_FOUND`, `TOO_MANY_REQUESTS`, …) are in `EXPECTED_ERROR_CODES`
   and skipped, so Sentry only sees real bugs (chiefly `INTERNAL_SERVER_ERROR`).
 - `apps/{web,admin}/src/lib/sentry.ts` exports `captureError: CaptureError`,
-  bound in each app's `app/api/trpc/[trpc]/route.ts` context. It attaches user
+  bound in each app's `app/api/the API/[the API]/route.ts` context. It attaches user
   context **per-event** (`captureException(err, { user: { id } })`), never via
   global `setUser` — that would leak identities across concurrent requests in a
   warm server runtime.
 
-To capture in a non-tRPC handler, call `Sentry.captureException` directly (it's
+To capture in a non-Hono RPC handler, call `Sentry.captureException` directly (it's
 a no-op when uninitialized).
 
 ## Gotchas
 
 - **`tunnelRoute: "/monitoring"`** proxies browser events through a same-origin
   path to dodge ad blockers. It's locale-agnostic and **excluded from the
-  next-intl proxy matcher** in `proxy.ts` (alongside `api|trpc`) — otherwise an
+  next-intl proxy matcher** in `proxy.ts` (alongside `api|the API`) — otherwise an
   error POST from a logged-out user gets redirected to sign-in and is lost.
 - **Service worker (web):** the tunnel is a POST; Serwist's `defaultCache` only
   caches GET navigations/assets, so it passes through untouched — no `app/sw.ts`
@@ -114,7 +107,7 @@ a no-op when uninitialized).
 
 1. Trigger a client crash → issue appears in `next-saas-boilerplate-web` with a **readable,
    source-mapped** stack, `environment: preview`, release = commit SHA.
-2. Force a tRPC `INTERNAL_SERVER_ERROR` → captured **with `userId`**; force a
+2. Force a Hono RPC `INTERNAL_SERVER_ERROR` → captured **with `userId`**; force a
    `BAD_REQUEST` → **not** captured (expected-error filter).
 3. Confirm Better Stack still gets `log.error` records — the two run
    independently.

@@ -3,16 +3,9 @@ name: log
 description: How to use, configure, and extend `@saas/log` — the provider-agnostic logger backed by Pino with swappable channels and a fake mode for tests.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # `@saas/log`
 
@@ -23,7 +16,7 @@ register your own transport without touching call sites.
 ## When to reach for it
 
 - Any time you'd instinctively type `console.log` in product code.
-- Background jobs (Trigger), tRPC procedures, server actions, Next route
+- Background jobs (Trigger), route handlers, server actions, Next route
   handlers, scripts in `packages/*`.
 - Tests that need to **assert** on log output.
 
@@ -96,7 +89,7 @@ Conventions:
 Per-request, per-job, per-tenant context goes in a child:
 
 ```ts
-// inside a tRPC middleware
+// inside a Hono middleware
 const requestLog = log.child({ requestId: ctx.requestId, userId: ctx.userId });
 requestLog.info("handling request");
 ```

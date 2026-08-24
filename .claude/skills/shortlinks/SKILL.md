@@ -3,16 +3,9 @@ name: shortlinks
 description: Self-hosted URL shortener for the next-saas-boilerplate — `@saas/shortlinks` (provider-agnostic, null + custom) backing SMS/WhatsApp links + click analytics. The redirect runs on the API Worker; rows live in Turso. Use when shortening a URL before a send, adding a shortlink from the admin, debugging the `/r/:slug` redirect or click counts, wiring a new environment, or adding a third-party provider.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # @saas/shortlinks — self-hosted URL shortener
 
@@ -32,7 +25,7 @@ Long URLs in SMS/WhatsApp burn segments (160 GSM-7 chars = 1 segment = $) and lo
 | API feature | `packages/api/src/features/shortlinks/` (router → service → repository + `store.ts` adapter) |
 | Redirect endpoint | `apps/api/src/index.ts` (`GET /r/:slug`) |
 | Worker bootstrap | `apps/api/src/lib/shortlinks.ts` (repository + manager + base URL) |
-| ctx binding | `packages/api/src/trpc.ts` (`ShortlinksBinding`, `ctx.shortlinks`, `ctx.shortlinkBaseUrl`) |
+| ctx binding | `apps/api/src/lib/` (`ShortlinksBinding`, `ctx.shortlinks`, `ctx.shortlinkBaseUrl`) |
 | Admin UI | `apps/admin/app/[locale]/(dashboard)/shortlinks/**` + `apps/admin/src/features/shortlinks/**` |
 
 ---
@@ -104,17 +97,17 @@ The geo is captured at redirect time from Cloudflare's `request.cf` — no IP lo
 
 ---
 
-## API surface (tRPC `shortlinks` router)
+## API surface (Hono RPC `shortlinks` router)
 
 ```ts
-api.shortlinks.create({ targetUrl, slug?, expiresAt? });  // staffProcedure → goes through ctx.shortlinks
-api.shortlinks.list({ search?, page, pageSize });          // staffProcedure
-api.shortlinks.get({ id });                                // staffProcedure
-api.shortlinks.analytics({ id, sinceDays });               // staffProcedure
-api.shortlinks.deactivate({ id });                         // ownerProcedure
+api.shortlinks.create({ targetUrl, slug?, expiresAt? });  // a staff-guarded route → goes through ctx.shortlinks
+api.shortlinks.list({ search?, page, pageSize });          // a staff-guarded route
+api.shortlinks.get({ id });                                // a staff-guarded route
+api.shortlinks.analytics({ id, sinceDays });               // a staff-guarded route
+api.shortlinks.deactivate({ id });                         // an owner-guarded route
 ```
 
-Responses carry `shortUrl` (built from `ctx.shortlinkBaseUrl`). The redirect is **not** a tRPC procedure — it's the raw Worker route.
+Responses carry `shortUrl` (built from `ctx.shortlinkBaseUrl`). The redirect is **not** a route handler — it's the raw Worker route.
 
 ---
 
@@ -157,6 +150,6 @@ The custom provider stays as the default self-hosted path; a third party becomes
 
 - **`SHORTLINK_BASE_URL` must include `/r`** and have no trailing slash. The short URL is `${base}/${slug}`; the redirect route is `/r/:slug`. Mismatched base → links point at a 404.
 - **The package is Drizzle-free on purpose.** Don't `import "@saas/db"` inside `packages/shortlinks` — persist through the `ShortlinkStore` port; the adapter lives in `packages/api/.../shortlinks/store.ts`.
-- **Don't route the redirect through tRPC.** It's a public 302 with no auth + a `waitUntil` click write; keep it a raw Hono route so it stays fast and cacheable.
+- **Don't route the redirect through Hono RPC.** It's a public 302 with no auth + a `waitUntil` click write; keep it a raw Hono route so it stays fast and cacheable.
 - **Slug is unique host-wide**, not per-org (the short domain is shared). Org scoping is on the row, not the slug.
 - **Dev is passthrough.** With the `null` provider, `shorten()` returns the long URL — that's expected; you only see real short links in preview/prod (or by pointing dev at a `custom` base URL).

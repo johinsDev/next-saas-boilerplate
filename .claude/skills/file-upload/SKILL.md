@@ -3,16 +3,9 @@ name: file-upload
 description: File-upload UI in the next-saas-boilerplate monorepo — Dropzone primitive in @saas/ui, `useFileUpload` hook in apps/web, react-hook-form bridge. Use when adding an avatar/document picker, wiring a form, customizing the dropzone, debugging upload progress, or writing Storybook stories for storage-aware components.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # file-upload — Dropzone primitive + useFileUpload hook + RHF bridge
 
@@ -21,7 +14,7 @@ The UI half of the storage channel. For the **server side** (providers, presigne
 Three layers, each composable on its own:
 
 1. **`<Dropzone.*>`** in `@saas/ui` — headless compound primitive over `react-dropzone`. No upload logic. Just drop-area UI + file-list slots.
-2. **`useFileUpload()`** in `apps/web/src/features/storage/hooks/` — state machine (queued → uploading → success/error), XHR with progress, tRPC presign + download URL flow, abort support.
+2. **`useFileUpload()`** in `apps/web/src/features/storage/hooks/` — state machine (queued → uploading → success/error), XHR with progress, Hono RPC presign + download URL flow, abort support.
 3. **`<FileUpload>`** + **`<RHFFileUpload>`** in `apps/web/src/features/storage/components/` — composes layers 1 + 2; the RHF one adds a `Controller` wrapper.
 
 Mix and match. Need a custom UI but the standard upload state? Use the primitive + the hook. Need standard everything? Use the connected component.
@@ -35,7 +28,7 @@ Mix and match. Need a custom UI but the standard upload state? Use the primitive
 | Avatar input bound to a form | `<RHFFileUpload name="avatar" control={form.control} accept={{"image/*":[]}} maxFiles={1} />` |
 | Multi-file input (drag-drop, progress, remove) | `<FileUpload value={[]} multiple maxFiles={5} />` |
 | Custom dropzone styling/behavior with default upload | `useFileUpload()` + `<Dropzone>` + your own list rendering |
-| Pure UI demo (Storybook, designer review) | `<Dropzone>` primitives standalone — no hook, no tRPC |
+| Pure UI demo (Storybook, designer review) | `<Dropzone>` primitives standalone — no hook, no Hono RPC |
 | Server-side write (no user picker) | Skip this skill — call `storage.disk().put(...)` directly |
 
 ---
@@ -162,12 +155,12 @@ add() called
    │
    ▼
 queued (progress: 0)
-   │   trpc.storage.createUploadUrl.mutate(...)
+   │   api.storage.createUploadUrl.$post(...)
    ▼
 uploading (progress: 0..100)
    │   XHR PUT + upload.onprogress
    ▼
-   ├─ 2xx → trpc.storage.createDownloadUrl.mutate(...) → success (url set)
+   ├─ 2xx → api.storage.createDownloadUrl.$post(...) → success (url set)
    └─ failure → error (error set)
 ```
 

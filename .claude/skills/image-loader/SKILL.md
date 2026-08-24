@@ -3,16 +3,9 @@ name: image-loader
 description: Optimize images in production via a custom Next.js loader that rewrites `<Image>` src through the API Worker's `/img` transform endpoint (resize + webp/avif via `cf.image`). Use when adding a new `<Image>`, picking `sizes`/`placeholder`, debugging "image not transformed", wiring an upload→display flow, or setting up the prod image pipeline.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # image-loader — Worker `cf.image` transforms + `<Image>` patterns
 
@@ -90,7 +83,7 @@ The loader does NOT add `format` — the Worker derives it from `Accept`. `<Imag
 
 Everything exists; wire it like the dev demo (`apps/admin/src/features/storage/components/dev-page.tsx`, section 0):
 
-1. `<FileUpload onChange={setUrls} accept={{ "image/*": [] }} />` (`apps/admin/src/features/storage/components/file-upload.tsx`) → `useFileUpload` → tRPC `storage.createUploadUrl` (presigned PUT) → XHR PUT direct to R2 → tRPC `storage.createDownloadUrl` → public URL.
+1. `<FileUpload onChange={setUrls} accept={{ "image/*": [] }} />` (`apps/admin/src/features/storage/components/file-upload.tsx`) → `useFileUpload` → Hono RPC `storage.createUploadUrl` (presigned PUT) → XHR PUT direct to R2 → Hono RPC `storage.createDownloadUrl` → public URL.
 2. Render: `<Image src={urls[0]} fill sizes="400px" />` → loader → Worker `/img` (prod).
 
 ## Per-env behaviour

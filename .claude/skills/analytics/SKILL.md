@@ -1,22 +1,15 @@
 ---
 name: analytics
-description: Product analytics for the next-saas-boilerplate monorepo — `@saas/analytics` (memory-style abstraction) backed by PostHog (browser + node), the React Context exposing `track`/`page`/`identify`/`reset`, and the per-request tRPC `ctx.analytics` binding. Use when adding a new tracked event, wiring identify after login, choosing the right `distinctId` for an anonymous endpoint, debugging "events not showing in PostHog", or adding a new analytics provider.
+description: Product analytics for the next-saas-boilerplate monorepo — `@saas/analytics` (memory-style abstraction) backed by PostHog (browser + node), the React Context exposing `track`/`page`/`identify`/`reset`, and the per-request Hono RPC `ctx.analytics` binding. Use when adding a new tracked event, wiring identify after login, choosing the right `distinctId` for an anonymous endpoint, debugging "events not showing in PostHog", or adding a new analytics provider.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # analytics — `@saas/analytics` + PostHog (server + client)
 
-Provider-agnostic product analytics. Same shape as `@saas/cache`/`@saas/sms`/`@saas/rate-limit` (strategy + factory + env swap + faker + UTs), but dual-entry (mirror of `@saas/auth`): server (`posthog-node`) for tRPC/Next server, client (`posthog-js`) for the React Context. Two providers ship: `null` (noop) and `posthog`.
+Provider-agnostic product analytics. Same shape as `@saas/cache`/`@saas/sms`/`@saas/rate-limit` (strategy + factory + env swap + faker + UTs), but dual-entry (mirror of `@saas/auth`): server (`posthog-node`) for Hono RPC server, client (`posthog-js`) for the React Context. Two providers ship: `null` (noop) and `posthog`.
 
 ```
 packages/analytics/
@@ -30,7 +23,7 @@ packages/analytics/
 │   ├── errors.ts                AnalyticsError / ProviderError / MissingDependencyError
 │   └── providers/{null-server,posthog-server,_lazy}.ts
 packages/api/src/
-├── trpc.ts                      Context.analytics? AnalyticsBinding
+├── lib/analytics.ts             the analytics binding on the Hono context
 └── analytics.ts                 resolveDistinctId(ctx) + baseProperties(ctx, app)
 apps/{web,admin}/src/lib/analytics.ts   server bootstrap (manager singleton, bound on ctx)
 apps/{web,admin}/app/[locale]/providers.tsx  mounts <AnalyticsProvider> in the client tree
@@ -44,7 +37,7 @@ All four methods accept an optional `properties` object that's merged on top of 
 
 | Method | Where | Notes |
 | --- | --- | --- |
-| `track(event, props?)` (client) / `capture(event, props?)` (server) | React via `useAnalytics()`, tRPC via `ctx.analytics?.capture(...)` | Send a custom event. |
+| `track(event, props?)` (client) / `capture(event, props?)` (server) | React via `useAnalytics()`, Hono RPC via `ctx.analytics?.capture(...)` | Send a custom event. |
 | `page(props?)` | both | Emits `$pageview`. The React provider auto-fires it on every App Router navigation; you only call it manually for non-route "screens". |
 | `identify(distinctId, props?)` (client) / `identify(props)` (server, distinctId already baked) | both | **Auto-called** by `AnalyticsProvider` when the Better Auth session appears. Call manually if you want to identify before login (rare). |
 | `reset()` (client only) | React | **Auto-called** when the session flips to null on sign-out. |
@@ -66,7 +59,7 @@ export function ClaimRewardButton({ rewardId }: { rewardId: string }) {
 ```
 
 ```ts
-// inside a tRPC mutation
+// inside a a POST route
 .mutation(({ ctx, input }) => {
   // ...do the work...
   ctx.analytics?.capture("stamp.earned", { cardId: input.cardId });
@@ -112,7 +105,7 @@ Override `ANALYTICS_PROVIDER=null|posthog` to flip the **server**. To test on a 
 
 1. **Add the event name** to the `AnalyticsEvent` union in `packages/analytics/src/types.ts` (the union accepts any string at runtime; declaring it gates typo drift at review).
 2. **Fire it**:
-   - From a tRPC router: `ctx.analytics?.capture("my.event", { …props })`.
+   - From a Hono route: `ctx.analytics?.capture("my.event", { …props })`.
    - From a React component: `useAnalytics().track("my.event", { …props })`.
 3. **Test it** with the `FakeAnalytics` (below).
 4. **Document** the props you decided on in a comment near the declaration so the next person doesn't invent a parallel shape.
@@ -152,7 +145,7 @@ analytics.restore();
 ## Common pitfalls
 
 - **"Events don't show up in PostHog."** Check the cascade. In dev + preview the default is `null` (intentional). For a one-off preview test, pin `ANALYTICS_PROVIDER=posthog` + `NEXT_PUBLIC_POSTHOG_KEY` branch-scoped on Vercel. Then redeploy — `NEXT_PUBLIC_*` is build-time.
-- **Server events with a wrong distinctId.** `resolveDistinctId(ctx)` returns `user:<id>` only when the session is non-null. Anonymous mutations fall through to `anon:<ip>` (Vercel's `x-forwarded-for` first hop). If your endpoint should always be signed in, gate it with `protectedProcedure` first.
+- **Server events with a wrong distinctId.** `resolveDistinctId(ctx)` returns `user:<id>` only when the session is non-null. Anonymous mutations fall through to `anon:<ip>` (Vercel's `x-forwarded-for` first hop). If your endpoint should always be signed in, gate it with `an authenticated route` first.
 - **`identify` is called twice on hard reloads.** The React provider remembers the last identified user via `useRef`; it skips a re-call if the id hasn't changed. If you see double-identifies, you probably wrapped two `<AnalyticsProvider>`s.
 - **PII in events.** Don't pass email/phone/etc in event properties. Use `identify(distinctId, { email })` once at login (the provider does this automatically); keep events purely about the action.
 - **SSR hydration mismatches with `useAnalytics`.** The hook returns the same surface server-side (noop) and client-side, so SSR is safe — but call it from a `"use client"` component, not a server one.
@@ -171,7 +164,7 @@ analytics.restore();
 ## References
 
 - `packages/analytics/src/*` — abstraction, dual entry.
-- `packages/api/src/{trpc,analytics}.ts` — Context binding + helpers.
+- `packages/api/src/{the API,analytics}.ts` — Context binding + helpers.
 - `apps/{web,admin}/src/lib/analytics.ts` — server bootstrap.
 - `apps/{web,admin}/app/[locale]/providers.tsx` — React mount.
 - `.claude/skills/cache/SKILL.md` — the sibling provider-agnostic abstraction.

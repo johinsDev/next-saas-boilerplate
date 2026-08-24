@@ -3,16 +3,9 @@ name: realtime
 description: Real-time WebSocket events for the next-saas-boilerplate monorepo via PartyKit (Cloudflare Workers + Durable Objects). Use when wiring a live event (stamp earned, reward ready, promo announcement, future chatbot), adding a new party, debugging a stuck connection, switching between local PartyKit and the deployed worker, or designing where the next real-time concern belongs.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # realtime — PartyKit channel for the next-saas-boilerplate
 
@@ -46,9 +39,9 @@ A "stamp earned" event ideally fires on realtime AND push (and later database). 
 | Server-side ticket signer | `packages/realtime/src/ticket.ts` (`signTicket`, `signHmac`) |
 | React hook (browser) | `packages/realtime/src/client/index.ts` (`usePartyRoom`) |
 | Fake for tests / dev fallback | `packages/realtime/src/fake.ts` (`FakeRealtime`) |
-| tRPC ticket issuance | `packages/api/src/features/realtime/` |
+| Hono RPC ticket issuance | `packages/api/src/features/realtime/` |
 | App bootstraps | `apps/{web,admin}/src/lib/realtime.ts` |
-| App tRPC ctx wiring | `apps/{web,admin}/src/lib/trpc/server.ts` + `app/api/trpc/[trpc]/route.ts` |
+| App Hono RPC ctx wiring | `apps/{web,admin}/src/lib/the API/server.ts` + `app/api/the API/[the API]/route.ts` |
 | Web hook (customer room) | `apps/web/src/features/realtime/hooks/use-customer-room.ts` |
 | Connection badge component | `apps/web/src/features/realtime/components/connection-badge.tsx` |
 | Dev smoke page | `apps/web/app/[locale]/(dev)/realtime/page.tsx` |
@@ -88,7 +81,7 @@ Methods you'll call:
 
 ```
 ┌──────────────────┐   1. Mount hook                    ┌────────────────────┐
-│  apps/web        │ ─────────────────────────────────▶ │ Next API (tRPC)    │
+│  apps/web        │ ─────────────────────────────────▶ │ Next API (Hono RPC)    │
 │  React component │ ◀─────── 2. signed JWT ticket ──── │ realtime.issueTicket
 │                  │                                     └────────────────────┘
 │                  │   3. wss + token query             ┌────────────────────┐
@@ -122,7 +115,7 @@ To rotate the secret:
 ## Publishing an event from Next
 
 ```ts
-import { realtime } from "@/lib/realtime";   // or read it off ctx in a tRPC procedure
+import { realtime } from "@/lib/realtime";   // or read it off ctx in a route handler
 
 await realtime.publish(`customer:${customer.id}`, {
   event: "stamp.earned",
@@ -130,11 +123,11 @@ await realtime.publish(`customer:${customer.id}`, {
 });
 ```
 
-That's it. Inside tRPC procedures, prefer `ctx.realtime` (bound in `apps/<app>/app/api/trpc/[trpc]/route.ts`) so the router doesn't reach for the bootstrap singleton.
+That's it. Inside route handlers, prefer `ctx.realtime` (bound in `apps/<app>/app/api/the API/[the API]/route.ts`) so the router doesn't reach for the bootstrap singleton.
 
 Conventions:
 - **`event` is dotted**, namespace-first: `stamp.earned`, `reward.ready`, `promo.live`, `chat.message`, `connection.ready`. The namespace = the feature; the verb = past-tense for "this happened" events, imperative for commands.
-- **`data` is small** — keep it under a few hundred bytes. Anything heavier should fetch via tRPC after the event fires.
+- **`data` is small** — keep it under a few hundred bytes. Anything heavier should fetch via Hono RPC after the event fires.
 - **Best-effort, never blocks the write** — if the realtime POST fails, swallow the error. Push + database channels will catch the user up. Realtime is the cherry on top.
 
 ---

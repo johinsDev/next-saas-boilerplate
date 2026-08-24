@@ -3,20 +3,13 @@ name: pwa
 description: Build, debug and extend the apps/web Progressive Web App. Use when adding install/offline behavior, debugging the service worker, refreshing brand icons or theme colors, tightening cache strategy, or onboarding a teammate to "how is the PWA wired".
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # PWA — apps/web installable + offline
 
-`apps/web` (the customer-facing tea-shop next-saas-boilerplate app) ships as an installable PWA. Users open it in mobile browser, get an install prompt, and can launch it from the home screen as if it were native. Loss-of-network shows a branded offline page instead of the browser's "you are offline" stub. API calls (tRPC) intentionally don't cache — only static assets and HTML do.
+`apps/web` (the customer-facing tea-shop next-saas-boilerplate app) ships as an installable PWA. Users open it in mobile browser, get an install prompt, and can launch it from the home screen as if it were native. Loss-of-network shows a branded offline page instead of the browser's "you are offline" stub. API calls (Hono RPC) intentionally don't cache — only static assets and HTML do.
 
 ```
 apps/web/
@@ -63,7 +56,7 @@ Configured in `app/sw.ts`:
 | --- | --- | --- |
 | `_next/static/*` (chunks, images) | `defaultCache` → cache-first, long TTL | Hashed URLs; safe to cache aggressively. |
 | HTML page navigations | network-first, fall back to `/offline` | Always show fresh content when online; never block the user when offline. |
-| `/api/*`, `/trpc/*` | **NOT cached** (network-only) | Auth + user-scoped data; stale would be wrong. |
+| `/api/*`, `/the API/*` | **NOT cached** (network-only) | Auth + user-scoped data; stale would be wrong. |
 | `/monitoring` (Sentry tunnel) | passes through untouched | It's a POST; `defaultCache` only caches GET navigations/assets, so the SW never intercepts it. No `app/sw.ts` change needed. See the `sentry` skill. |
 | Images | cache-first, 30-day TTL | Mostly static next-saas-boilerplate assets. |
 | Web fonts | cache-first | Same. |
@@ -151,7 +144,7 @@ Service worker entries aren't imported by app code (Serwist injects the manifest
 ## When to bring it further (out of MVP scope)
 
 - **Push notifications** — Implemented in `@saas/push` + `apps/web/app/sw.ts` (`push` + `notificationclick` listeners). The browser subscription helper is `apps/web/src/lib/push-subscription.ts`; the React hook + button live in `apps/web/src/features/push/`. See `.claude/skills/push/SKILL.md` for the full data flow, registration UX, and how the abstraction shares with Expo Push for the future native app.
-- **Background sync** — IndexedDB queue for actions taken offline (e.g. "I scanned my QR but had no signal"), reconciliation when online. Bigger refactor of tRPC mutations; tracked in Linear.
+- **Background sync** — IndexedDB queue for actions taken offline (e.g. "I scanned my QR but had no signal"), reconciliation when online. Bigger refactor of a POST routes; tracked in Linear.
 - **Periodic sync** — refresh user's points on a schedule even when the app is closed. Limited browser support; revisit when more devices ship it.
 
 ---

@@ -75,7 +75,7 @@ export async function GET() {
 
 3. **Mature ecosystem**
    - Extensive community resources
-   - Third-party integrations (Nexus, tRPC)
+   - Third-party integrations (Nexus, Hono RPC)
    - Enterprise support options
 
 4. **Rich developer experience**

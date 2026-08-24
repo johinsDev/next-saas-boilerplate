@@ -3,16 +3,9 @@ name: vercel
 description: Deploy and operate the next-saas-boilerplate monorepo on Vercel. Use when adding a new app to Vercel, debugging a failed build, configuring env vars, rolling back a deploy, connecting Vercel to Better Stack uptime monitors, or onboarding a teammate to "how is the deploy wired".
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # Vercel — deploy guide for the monorepo
 
@@ -247,7 +240,7 @@ That's our `dev`/`build`/`start` script wrapping `next` with `dotenv -e ../../.e
 
 ### Function timeout (10s on Hobby, 60s on Pro)
 
-Hobby plan caps function execution at 10s. If a tRPC procedure takes longer (e.g. heavy DB query), it'll fail with `FUNCTION_INVOCATION_TIMEOUT`. Solutions:
+Hobby plan caps function execution at 10s. If a route handler takes longer (e.g. heavy DB query), it'll fail with `FUNCTION_INVOCATION_TIMEOUT`. Solutions:
 
 - Optimize the query.
 - Move the work to Trigger.dev.

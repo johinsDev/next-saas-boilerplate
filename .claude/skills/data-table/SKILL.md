@@ -3,16 +3,9 @@ name: data-table
 description: The one list pattern for every admin CRUD — a server-driven, URL-state (nuqs) data table built on @tanstack/react-table + @saas/ui (Base UI), with pagination, multi-column sort, search, faceted/date/range filters, column visibility, grid/list toggle, row selection + bulk actions (export/delete/…), skeletons, and an RSC-prefetched first paint. Use when adding or migrating any admin list (clientes, productos, recompensas, promos, …). Stores is the worked reference. Composes with `admin-filters` (the facet controls) and `admin-ui` (screen chrome).
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # Data Table — the standard admin list
 
@@ -38,14 +31,14 @@ diceui/Radix. **Reference:** Tiendas (`apps/admin/src/features/stores/`).
 ## Data fetching (hybrid — "best of Next")
 1. The **RSC page** reads `searchParams`, derives the list input with a shared
    `buildXInput` + a nuqs **`createLoader`**, prefetches via the server caller
-   (`@/lib/trpc/server` → `await trpc()`), and passes the result as
+   (`the service directly` → `await the API()`), and passes the result as
    **`initialData`** → server-rendered first paint, no skeleton.
 2. The **client view** reads the same nuqs params, builds the same input, and runs
-   `useQuery(trpc.X.list.queryOptions(input, { placeholderData: keepPreviousData, initialData? }))`.
+   `useQuery(api.X.list query options(input, { placeholderData: keepPreviousData, initialData? }))`.
    nuqs is **shallow** → react-query owns refetching (skeleton on `isFetching`).
    Seed `initialData` only when the current input equals the mount input
    (`JSON.stringify` guard) so other pages don't get page-1 data. Mutations
-   `invalidateQueries(trpc.X.list.queryFilter())`.
+   `invalidateQueries(api.X.list query key())`.
 
 See `apps/admin/src/features/stores/list-params.ts` (`storesSearchParams`,
 `buildStoresInput`, `loadStoresSearchParams`) + `…/stores/page.tsx` + `stores-view.tsx`.
@@ -74,7 +67,7 @@ confirmation.
    `useDataTable`, the toolbar (search + facets + date + `DataTableSortList` +
    `DataTableViewOptions` + `ViewToggle`), `<DataTable>` (+ `renderGrid` if grid),
    `DataTablePagination`, `DataTableBulkBar`.
-4. **RSC page**: `loadXSearchParams` → `buildXInput` → `await trpc()` prefetch → `initialData`.
+4. **RSC page**: `loadXSearchParams` → `buildXInput` → `await the API()` prefetch → `initialData`.
 5. i18n: reuse the `DataTable` namespace (pagination/sort/view/bulk) + add column/facet/bulk labels under the feature.
 
 ## Detail view (intercepting modal — optional per CRUD)
@@ -89,7 +82,7 @@ The **bare `[id]` route is the DETAIL**; the edit wizard moves to `[id]/edit`.
   - `(dashboard)/layout.tsx` declares the parallel slot: `modal: ReactNode` prop, render `{modal}` after `{children}` (one-time setup per app).
   - `(dashboard)/@modal/default.tsx` → `return null`.
   - `(dashboard)/@modal/(.)<x>/[id]/page.tsx` → `<X>DetailModal`.
-  - `(dashboard)/<x>/[id]/page.tsx` → RSC: `await trpc()` → `x.get` → `notFound()` → `<X>DetailView variant="page">` (back link).
+  - `(dashboard)/<x>/[id]/page.tsx` → RSC: `await the API()` → `x.get` → `notFound()` → `<X>DetailView variant="page">` (back link).
   - `(dashboard)/<x>/[id]/edit/page.tsx` → the wizard; add `/<x>/[id]/edit` to `i18n/routing.ts` `pathnames`.
 - **Triggers**: name cell + grid card click → `/<x>/[id]` (card stops propagation on its checkbox/actions wrapper); row `⋯` menu gets "Ver detalle" → `/<x>/[id]` and "Editar" → `/<x>/[id]/edit`.
 - Stores is the reference (`store-detail-view.tsx` + `store-detail-modal.tsx`).

@@ -3,16 +3,9 @@ name: icons
 description: How icons work in the next-saas-boilerplate monorepo. Default to lucide-react for almost everything; convert custom/brand SVGs into typed React components with @svgr/cli (web flavor) and ship them from @saas/ui. Use when adding an icon to web/admin/ui, picking lucide vs a custom glyph, converting a raw .svg the designer handed you, tinting/sizing an icon, or debugging "my custom icon won't change color / shows clipped".
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # Icons — `lucide-react` first, `@svgr/cli` for the rest
 

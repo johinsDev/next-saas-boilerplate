@@ -3,16 +3,9 @@ name: notifications
 description: Multi-channel notifications for the next-saas-boilerplate monorepo — `@saas/notifications`, a class-based engine (à la Laravel/Adonis) that fans one `Notification` out to email / sms / push / whatsapp / realtime / database, respecting per-customer marketing opt-outs, and runs through Trigger.dev. Use when adding a new notification type, adding a channel, wiring the admin "send" screen or the profile preferences toggle, debugging "channel didn't send", or onboarding a teammate to "how does one event reach many channels".
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # @saas/notifications
 
@@ -33,7 +26,7 @@ It has **no hard dependency** on the transport packages: channels receive the ma
 | `FakeNotifier` (tests) | `packages/notifications/src/fake-notifier.ts` |
 | DB tables (`notification`, `notification_preference`) | `packages/db/src/schema/notifications.ts` |
 | Drizzle repos (notifiable / preferences / feed) | `packages/api/src/features/notifications/` |
-| tRPC router (feed, prefs, customer list, send) | `packages/api/src/features/notifications/router.ts` |
+| Hono route (feed, prefs, customer list, send) | `packages/api/src/features/notifications/router.ts` |
 | Notifier bootstrap (DI wiring) | `packages/jobs/notifications.ts` |
 | Notification registry + demo classes | `packages/jobs/notifications-registry.ts` |
 | Trigger.dev task | `packages/jobs/trigger/send-notification.ts` |

@@ -1,18 +1,11 @@
 ---
 name: feature-flags
-description: Feature flags + A-B testing for the next-saas-boilerplate monorepo — `@saas/feature-flags` backed by PostHog (browser + node), the React Context exposing `useIsFeatureEnabled`/`useFeatureFlag`, and the per-request tRPC `ctx.flags` binding. Use when adding a new flag, gating UI by a flag, running an A-B experiment, choosing the right `distinctId`, debugging "flag returns default in preview", or adding a new flags provider.
+description: Feature flags + A-B testing for the next-saas-boilerplate monorepo — `@saas/feature-flags` backed by PostHog (browser + node), the React Context exposing `useIsFeatureEnabled`/`useFeatureFlag`, and the per-request Hono RPC `ctx.flags` binding. Use when adding a new flag, gating UI by a flag, running an A-B experiment, choosing the right `distinctId`, debugging "flag returns default in preview", or adding a new flags provider.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # feature-flags — `@saas/feature-flags` + PostHog (server + client)
 
@@ -34,9 +27,9 @@ packages/feature-flags/
 │   ├── fake-flags.ts            tunable + assertions
 │   ├── errors.ts                FeatureFlagsError / ProviderError / MissingDependencyError
 │   └── providers/{null-server,posthog-server,_lazy}.ts
-packages/api/src/trpc.ts                Context.flags? FlagsBinding
+apps/api/src/lib/                Context.flags? FlagsBinding
 apps/{web,admin}/src/lib/feature-flags.ts   server bootstrap (manager singleton, bound on ctx) + local resolveDistinctId helper
-apps/{web,admin}/app/[locale]/providers.tsx mounts <FlagsProvider> inside <TRPCProvider>
+apps/{web,admin}/app/[locale]/providers.tsx mounts <FlagsProvider> inside <QueryProvider>
 ```
 
 ---
@@ -65,7 +58,7 @@ export function StampScreen() {
 ```
 
 ```ts
-// in a tRPC mutation
+// in a a POST route
 .mutation(async ({ ctx, input }) => {
   if (await ctx.flags?.isEnabled("new-stamp-flow")) {
     return newAdd(ctx, input);
@@ -174,7 +167,7 @@ flags.restore();
 ## References
 
 - `packages/feature-flags/src/*` — abstraction, dual entry.
-- `packages/api/src/trpc.ts` — `Context.flags?` binding type.
+- `apps/api/src/lib/` — `Context.flags?` binding type.
 - `apps/{web,admin}/src/lib/feature-flags.ts` — server bootstrap.
 - `apps/{web,admin}/app/[locale]/providers.tsx` — React mount.
 - `.claude/skills/analytics/SKILL.md` — sibling product analytics abstraction (shares the PostHog project).

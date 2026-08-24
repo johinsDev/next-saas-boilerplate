@@ -3,16 +3,9 @@ name: admin-filters
 description: The reusable Vercel-style filter pattern for admin resource lists (single-select, single-with-search, multi-select). Use when adding or changing filters on any list (clientes, productos, recompensas, compras, campañas, …) so every resource filters the same way.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # admin-filters — the one filter pattern for every admin list
 
@@ -101,7 +94,7 @@ value uncheckable-from-nowhere.
 ```tsx
 const [query, setQuery] = useState("");
 const debounced = useDebounce(query, { wait: 250 });
-const { data, isFetching } = useQuery(trpc.customers.search.queryOptions({ query: debounced, limit: 20 }));
+const { data, isFetching } = useQuery(api.customers.search query options({ query: debounced, limit: 20 }));
 
 <FilterMultiSelectAsync
   label={t("col.customer")}

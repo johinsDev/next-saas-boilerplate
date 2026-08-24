@@ -3,16 +3,9 @@ name: email
 description: Send transactional emails from the next-saas-boilerplate monorepo via `@saas/email` and author templates with `@saas/email-templates` (React Email + Tailwind). Use when triggering a send (welcome, password reset, points earned, OTP), adding a new transport, authoring/previewing a template, switching provider per environment, debugging Resend / outbox delivery, or reviewing the email outbox.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # @saas/email + @saas/email-templates — Email for the next-saas-boilerplate monorepo
 
@@ -65,7 +58,7 @@ Same shape as `@saas/sms` / `@saas/whatsapp`: same strategy pattern, same `FakeS
 | Web bootstrap | `apps/web/src/lib/email.ts` |
 | Admin bootstrap | `apps/admin/src/lib/email.ts` |
 | Drizzle outbox table | `packages/db/src/schema/email-outbox.ts` |
-| tRPC feature (list/get) | `packages/api/src/features/email-outbox/` |
+| Hono RPC feature (list/get) | `packages/api/src/features/email-outbox/` |
 | Web dev view | `apps/web/app/[locale]/(dev)/email-outbox/` |
 | Admin panel | `apps/admin/app/[locale]/(dashboard)/email-outbox/` |
 | E2E endpoint | `apps/web/app/api/email-outbox/` |
@@ -354,14 +347,14 @@ URL: `http://localhost:3002/es/email-outbox` (or `/en/`). Same gate as the Whats
 
 Same blueprint as the other outbox views: nuqs filters (`to` partial via ILIKE, `search` against subject/body, status pill), pagination, Suspense + skeleton, RSC for fetch. The detail page renders the stored HTML in a sandboxed iframe so an email's CSS can't bleed into the dev UI.
 
-Backed by 2 tRPC procedures under `emailOutbox` (`packages/api/src/features/email-outbox/`):
+Backed by 2 route handlers under `emailOutbox` (`packages/api/src/features/email-outbox/`):
 
 ```ts
 api.emailOutbox.list({ to?, status?, search?, page, pageSize });
 api.emailOutbox.get({ id });
 ```
 
-Both `publicProcedure` — gated by env at the page + endpoint layer, not by auth. Layering follows `.claude/skills/api-filters/SKILL.md` (router → service → repository, Drizzle only in repo).
+Both `a public route` — gated by env at the page + endpoint layer, not by auth. Layering follows `.claude/skills/api-filters/SKILL.md` (router → service → repository, Drizzle only in repo).
 
 ---
 
@@ -403,7 +396,7 @@ All inherit from `EmailError`. Stable `code` field for retry middleware / alerts
 
 Keeping the *sender* separate from the *templates* means:
 
-- Trigger.dev jobs and tRPC procedures can `import { BaseEmail } from "@saas/email"` without dragging React/JSX into a non-rendering runtime.
+- Trigger.dev jobs and route handlers can `import { BaseEmail } from "@saas/email"` without dragging React/JSX into a non-rendering runtime.
 - `@saas/email-templates` owns React Email + `@react-email/components`. Everything else is a string.
 - The `react-email` preview CLI scans one folder (`packages/email-templates/emails/`) and stays isolated from the rest of the build.
 - Apps that only need to *send* (workers) don't pull the template runtime; apps that only need to *render* (potential future digest tooling) don't pull the transports.

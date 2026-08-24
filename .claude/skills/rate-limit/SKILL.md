@@ -1,24 +1,17 @@
 ---
 name: rate-limit
-description: Rate limiting for the next-saas-boilerplate monorepo — the provider-agnostic @saas/rate-limit abstraction (memory / upstash / redis) + the tRPC `rateLimit` middleware. Use when protecting a procedure from abuse, adding a per-procedure limit, choosing a key (ip / user / phone), tuning the baseline, or debugging a 429 / TOO_MANY_REQUESTS.
+description: Rate limiting for the next-saas-boilerplate monorepo — the provider-agnostic @saas/rate-limit abstraction (memory / upstash / redis) + the Hono RPC `rateLimit` middleware. Use when protecting a procedure from abuse, adding a per-procedure limit, choosing a key (ip / user / phone), tuning the baseline, or debugging a 429 / TOO_MANY_REQUESTS.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
-# rate-limit — `@saas/rate-limit` + tRPC middleware
+# rate-limit — `@saas/rate-limit` + Hono middleware
 
-Protects tRPC procedures from being hammered. A provider-agnostic limiter
+Protects route handlers from being hammered. A provider-agnostic limiter
 (same shape as `@saas/cache`: memory + upstash + redis, swap by env) sits
-behind a tRPC middleware. **Every** procedure gets a generous baseline; abuse-
+behind a Hono middleware. **Every** procedure gets a generous baseline; abuse-
 sensitive ones stack a tighter per-procedure rule.
 
 ```
@@ -31,7 +24,7 @@ packages/rate-limit/
 │   ├── fake-limiter.ts          test double (counts + assertions)
 │   └── providers/{memory,upstash,redis}.ts
 packages/api/src/
-├── trpc.ts                      baseline middleware + `rateLimit()` factory + base procedures
+├── lib/rate-limit.ts            baseline middleware + `rateLimit()` factory
 └── rate-limit.ts                getClientIp() + resolveKey() + RateLimitOptions
 apps/{web,admin}/src/lib/rate-limit.ts   bootstrap (picks provider, bound onto ctx)
 ```
@@ -41,15 +34,15 @@ apps/{web,admin}/src/lib/rate-limit.ts   bootstrap (picks provider, bound onto c
 ## How it fits together
 
 1. Each app instantiates a `RateLimiter` in `src/lib/rate-limit.ts` and binds it
-   onto the tRPC context (`{ ...ctx, …, rateLimiter }`) in both
-   `app/api/trpc/[trpc]/route.ts` (HTTP) and `src/lib/trpc/server.ts` (RSC caller) —
+   onto the the Hono context (`{ ...ctx, …, rateLimiter }`) in both
+   `app/api/the API/[the API]/route.ts` (HTTP) and `src/lib/the API/server.ts` (RSC caller) —
    same pattern as `realtime` / `storage`.
-2. `packages/api/src/trpc.ts` applies a **baseline** middleware to every procedure
-   (via `baseProcedure`) and exports a `rateLimit()` factory for **overrides**.
+2. `apps/api/src/lib/` applies a **baseline** middleware to every procedure
+   (via `the base route`) and exports a `rateLimit()` factory for **overrides**.
 3. The middleware reads `ctx.rateLimiter`. **If it's unbound it fails open** (skips) —
    so CLI scripts + unit tests run unthrottled.
 
-On exceed → `TRPCError({ code: "TOO_MANY_REQUESTS" })` (HTTP 429).
+On exceed → `ServiceError({ code: "TOO_MANY_REQUESTS" })` (HTTP 429).
 
 ---
 
@@ -71,9 +64,9 @@ Stack `.use(rateLimit({...}))` for a tighter, **separately-counted** rule (named
 so it never shares a bucket with the baseline — the tighter one trips first):
 
 ```ts
-import { protectedProcedure, rateLimit, router } from "../trpc";
+import { an authenticated route, rateLimit, router } from "../the API";
 
-add: protectedProcedure
+add: an authenticated route
   .use(rateLimit({ name: "sellos.add", limit: 20, window: "1m", by: "user" }))
   .input(...)
   .mutation(...)
@@ -126,7 +119,7 @@ Better Auth runs its **own** rate limiting on the auth endpoints — see the
 `rateLimit` config + `customRules` in `packages/auth/src/server.ts` (e.g.
 `/phone-number/send-otp` 3/min), plus the per-phone OTP cap `enforcePhoneOtpCap`
 (counts rows in the `verification` table over 30 min). Those stay as-is and cover
-sign-in / OTP. **`@saas/rate-limit` covers tRPC procedures**, which Better Auth
+sign-in / OTP. **`@saas/rate-limit` covers route handlers**, which Better Auth
 doesn't see. Both can point at the same Upstash. If you later want the OTP cap on
 this abstraction, swap `enforcePhoneOtpCap` for `rateLimiter.limit(`otp:${phone}`, { limit: 5, window: "30m" })`.
 
@@ -185,9 +178,9 @@ per user** (a tighter rule on top of the baseline mutation limit of 40/min)":
 
 ```ts
 // packages/api/src/routers/clientes.ts (or features/clientes/router.ts)
-import { protectedProcedure, rateLimit, router } from "../trpc";
+import { an authenticated route, rateLimit, router } from "../the API";
 
-invite: protectedProcedure
+invite: an authenticated route
   .use(
     rateLimit({
       name: "clientes.invite", // unique name → its OWN counter, doesn't
@@ -196,7 +189,7 @@ invite: protectedProcedure
       window: "1h",            // reads like the prose: "5 per hour"
       by: "user",              // a logged-in user can't spread the cost
                                 // across IPs; skips anonymous (which can't
-                                // reach a protectedProcedure anyway)
+                                // reach a an authenticated route anyway)
     }),
   )
   .input(inviteSchema)
@@ -277,7 +270,7 @@ Mirror the `cache` skill's runbook:
   1. Confirm `RATE_LIMIT_PROVIDER` is set in that env (or that the cascade picks
      a usable default — `memory` in dev needs no creds; `upstash` needs them).
   2. Confirm the app bootstrap binds `rateLimiter` onto the ctx in BOTH
-     `app/api/trpc/[trpc]/route.ts` AND `src/lib/trpc/server.ts` (RSC + HTTP).
+     `app/api/the API/[the API]/route.ts` AND `src/lib/the API/server.ts` (RSC + HTTP).
      Forgetting the second one means SSR callers stay unthrottled.
   3. With Upstash: confirm `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`
      are present in the Vercel env for that deploy.
@@ -286,7 +279,7 @@ Mirror the `cache` skill's runbook:
   is `5 / 1h` you want the override to trip first within an hour, but a fast
   burst will hit the baseline first. That's fine: the user sees a 429 either way.
   If you want a per-call action that's *more* generous than the baseline (rare),
-  raise the baseline at the source in `packages/api/src/trpc.ts`.
+  raise the baseline at the source in `apps/api/src/lib/`.
 - **"It works locally but trips on every other request in preview/prod."**
   You probably left `RATE_LIMIT_PROVIDER=memory` in a serverless env. Switch to
   upstash — memory counts per lambda instance, so the effective limit is way
@@ -315,14 +308,14 @@ Mirror the `cache` skill's runbook:
   Order matters. Middleware chain is `withBaseline` → `enforceAuth` (for
   protected) → your `.use(rateLimit({...}))` overrides. If you want the auth
   check first, add the override AFTER `enforceAuth` happens (which it always
-  does when stacking on `protectedProcedure`).
+  does when stacking on `an authenticated route`).
 
 ---
 
 ## References
 
 - `packages/rate-limit/src/*` — the abstraction (mirrors `@saas/cache`).
-- `packages/api/src/trpc.ts` — baseline + `rateLimit()` factory.
+- `apps/api/src/lib/` — baseline + `rateLimit()` factory.
 - `packages/api/src/rate-limit.ts` — `getClientIp` + `resolveKey`.
 - `apps/{web,admin}/src/lib/rate-limit.ts` — bootstrap.
 - `.claude/skills/cache/SKILL.md` — the sibling provider-agnostic package.

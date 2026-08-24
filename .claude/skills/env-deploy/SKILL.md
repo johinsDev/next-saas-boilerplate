@@ -3,16 +3,9 @@ name: env-deploy
 description: Single source of truth for env vars (Infisical) and the reproducible dev/preview/prod deploy pipeline. Use when adding or rotating a secret, wiring an env into web/admin/jobs/partykit, setting up local dev, debugging "missing env" on a deploy, or onboarding a teammate to "where do secrets live and how do they reach each runtime".
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # env-deploy — secrets + deploy runbook
 
@@ -82,7 +75,7 @@ holds the values.
 
 `/api` is the Worker's vault — it holds the secrets that used to live in the
 Next apps' env (Better Auth secret, Google OAuth, Trigger key…). Because the
-Worker is now the single auth issuer + tRPC server, those secrets **must not**
+Worker is now the single auth issuer + the Hono app, those secrets **must not**
 be synced to the FE Vercel projects; `/shared` is the only folder that reaches
 the FE. `/ci` holds every deploy credential — the GitHub Actions workflows pull
 it via `infisical run --env=prod` (the only GitHub secrets are the Infisical
@@ -184,7 +177,7 @@ it all down on PR close.
 - Add `SLACK_DEPLOY_WEBHOOK_URL` to Infisical prod `/ci` to arm the Slack notify.
 - Add `PARTYKIT_TOKEN` to Infisical prod `/ci` to arm `deploy-partykit.yml`.
 - Add a staging-party redeploy step to `deploy-partykit.yml`.
-- Step-6 FE env trim: drop the now-unused Next `/api/trpc` + `/api/auth` routes,
+- Step-6 FE env trim: drop the now-unused Next `/api/the API` + `/api/auth` routes,
   make the FE env optional for DB/auth when going via the Worker.
 
 ---
@@ -659,7 +652,7 @@ split: Sentry for exceptions, Vercel for logs.
 
 ### Cloudflare Workers (Hono API) in preview — DONE
 
-The tRPC + Better Auth layer ships as a per-PR Worker. `preview.yml` deploys
+The Hono RPC + Better Auth layer ships as a per-PR Worker. `preview.yml` deploys
 `next-saas-boilerplate-api-pr-N` at `api.pr-N.t4diverclub.app` (a generated
 `wrangler.preview.toml`), reading `/shared` + `/api` from Infisical, and pins
 `NEXT_PUBLIC_API_URL` to it before the build so the FE points at the PR Worker.
@@ -672,4 +665,4 @@ is `.pr-N.t4diverclub.app`. `preview-cleanup.yml` tears it all down on PR close.
 
 - **Fase 5**: `check-env.ts` as a hard gate on preview + prod; secret
   rotation runbook across all surfaces; the step-6 FE env trim (make the FE
-  env optional for DB/auth now that the Worker is the issuer + tRPC server).
+  env optional for DB/auth now that the Worker is the issuer + the Hono app).

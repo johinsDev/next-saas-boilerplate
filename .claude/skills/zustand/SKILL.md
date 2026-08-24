@@ -3,16 +3,9 @@ name: zustand
 description: Client state management for the next-saas-boilerplate monorepo with Zustand (+ Immer). Use ONLY for state that several components genuinely share — not for local widget state, server data, or URL state. Covers where stores live, the Immer + selector + `useShallow` pattern for performance, typed slices, the Next App Router SSR-safe store-factory gotcha, and devtools/persist. Use when introducing a shared store, refactoring prop-drilling/context into a store, or reviewing a store for re-render/perf issues.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # zustand
 
@@ -20,7 +13,7 @@ Zustand is our **shared client state** tool: reach for it when **multiple, non-a
 
 | If the state is… | Use | Not zustand |
 | --- | --- | --- |
-| Server data (lists, entities, the notifications feed) | `@tanstack/react-query` (via `useTRPC`) | server state doesn't belong in a store |
+| Server data (lists, entities, the notifications feed) | `@tanstack/react-query` (via `hc<AppType>` + route handlers) | server state doesn't belong in a store |
 | URL/shareable (filters, page, tabs) | `nuqs` | |
 | Local to one component / its children | `useState` / `useReducer` | |
 | A small generic behavior (debounce, toggle, …) | `ahooks` | |

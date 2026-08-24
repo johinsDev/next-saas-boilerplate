@@ -3,16 +3,9 @@ name: wizard
 description: Server-driven multi-step "wizard" pattern for the next-saas-boilerplate monorepo — the iterator sibling of the `filters` pattern. A `Wizard`/`WizardStep` engine in @saas/api drives create/edit flows (segment → products → … → publish) where the backend owns the step sequence, gating and validation, the entity is saved as a draft from step 1 (entity-as-draft), and the FE just renders whatever step the server reports. Use when building any admin multi-step create/edit flow (promos, campaigns, onboarding), adding a step, or wiring the FE stepper. Promociones is the worked reference.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # Wizard — server-driven multi-step create/edit
 
@@ -63,7 +56,7 @@ class Wizard<TDraft, TServices> {
 `state()` is the iterator: `current` = the first step that `canEnter && !isComplete`,
 or `"review"` once all complete. `advance()` runs the gate (`PRECONDITION_FAILED`),
 then `schema.safeParse` (`BAD_REQUEST` with the ZodError as `cause` → the existing
-tRPC errorFormatter surfaces `zodError`), then `persist`. Covered by
+a service errorFormatter surfaces `zodError`), then `persist`. Covered by
 `_shared/__tests__/wizard.test.ts`.
 
 > **`override`**: `canEnter` has a default impl, so a step that overrides it needs
@@ -99,7 +92,7 @@ export class BenefitStep extends WizardStep<PromoRow, BenefitConfig, PromoStepSe
 `getState` (load → `promoWizard.state`), `advance` (load → `promoWizard.advance`),
 `publish` (load → assert `state.canPublish` else `PRECONDITION_FAILED` → flip
 status). Every read/write is `organizationId`-scoped so a draft can't cross
-tenants. `router.ts` exposes them on `managerProcedure` and the feature registers
+tenants. `router.ts` exposes them on `a manager-guarded route` and the feature registers
 as `promociones` in `_app.ts`. Same `router → service → repository` layering as
 `whatsapp-outbox` — the only layer touching Drizzle is the repository.
 
@@ -117,8 +110,8 @@ as `promociones` in `_app.ts`. Same `router → service → repository` layering
 - `components/steps/*` — one form per step. **Shared-schema steps** (segment,
   branding) reuse the API Zod via `zodResolver`; import it from the **client-safe
   subpath** `@saas/api/features/promotions/schemas` — **never** the main
-  `@saas/api` barrel, which transitively loads `@trpc/server` and throws
-  *"@trpc/server in a non-server environment"* in the browser (the schemas file
+  `@saas/api` barrel, which transitively loads `@the API/server` and throws
+  *"@the API/server in a non-server environment"* in the browser (the schemas file
   is pure Zod). `import type` from the barrel is fine — types are erased.
   **Adapter steps** (products as CSV, schedule as `datetime-local`) keep a local
   form shape and map on submit — the server still validates with the real step schema.
@@ -128,7 +121,7 @@ as `promociones` in `_app.ts`. Same `router → service → repository` layering
 ## Add a new wizard (the recipe)
 
 1. DB: a table with `status` + nullable domain columns (entity-as-draft), org-scoped. `bun run db:generate`.
-2. `features/<name>/`: `schemas.ts` (per-step Zod), `steps.ts` (one `WizardStep` each), `wizard.ts` (`new Wizard([...])`), `repository.ts`, `service.ts`, `router.ts`, `index.ts`; register in `_app.ts`; add a **client-safe subpath export** `"./features/<name>/schemas": "./src/features/<name>/schemas.ts"` in `packages/api/package.json` so the FE can import the step schemas without dragging in `@trpc/server`.
+2. `features/<name>/`: `schemas.ts` (per-step Zod), `steps.ts` (one `WizardStep` each), `wizard.ts` (`new Wizard([...])`), `repository.ts`, `service.ts`, `router.ts`, `index.ts`; register in `_app.ts`; add a **client-safe subpath export** `"./features/<name>/schemas": "./src/features/<name>/schemas.ts"` in `packages/api/package.json` so the FE can import the step schemas without dragging in `@the API/server`.
 3. Tests: a service test (`create → advance → publish` + gating) — the engine itself is already covered.
 4. FE: a `list` page + an `[id]` route mounting a `<name>-wizard.tsx` container (id from the URL; `getState` is the source of truth — no client store) + step forms; add `/<name>` and `/<name>/[id]` to `i18n/routing.ts` `pathnames` and a nav entry.
 

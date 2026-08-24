@@ -3,16 +3,9 @@ name: api-filters
 description: Three-layer feature pattern in `@saas/api` — router → service → repository — with composable filter classes. Use when adding a new API feature with list endpoints (filterable + paginated), refactoring an inline-Drizzle router into the feature-folder shape, or introducing a new filter on an existing list query.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # API features — composable filters + Router/Service/Repository
 
@@ -24,7 +17,7 @@ packages/api/src/features/<feature>/
 ├── filters.ts          one Filters subclass per list query
 ├── repository.ts       Drizzle access (the only file that touches db)
 ├── service.ts          business logic on top of the repo
-├── router.ts           tRPC procedures, thin
+├── router.ts           route handlers, thin
 └── index.ts            barrel — re-exports the router only
 
 packages/api/src/features/_shared/
@@ -43,8 +36,8 @@ Most CRUDish features end up with at least three concerns:
 
 | Layer | Owns | Doesn't own |
 | --- | --- | --- |
-| **Router** | tRPC procedure shape, auth check (`publicProcedure` vs `protectedProcedure`), wiring the service | Drizzle queries, business rules |
-| **Service** | Business rules (validations, opt-in checks, cross-repo composition, throwing `TRPCError`) | Drizzle calls, request shape |
+| **Router** | route handler shape, auth check (`a public route` vs `an authenticated route`), wiring the service | Drizzle queries, business rules |
+| **Service** | Business rules (validations, opt-in checks, cross-repo composition, throwing `ServiceError`) | Drizzle calls, request shape |
 | **Repository** | Drizzle calls (built via filters + pagination), nothing else | Auth, business policies, error shaping |
 
 Keeping these separate means:
@@ -166,18 +159,18 @@ export class WhatsAppOutboxService {
 
   async get(id: string) {
     const row = await this.repo.findById(id);
-    if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "..." });
+    if (!row) throw new ServiceError({ code: "NOT_FOUND", message: "..." });
     return row;
   }
 }
 
 // router.ts — one procedure per list/get; instantiate per-request
 export const whatsappOutboxRouter = router({
-  list: publicProcedure
+  list: a public route
     .input(listInputSchema)
     .query(({ ctx, input }) => {
       const service = new WhatsAppOutboxService(
-        new WhatsAppOutboxRepository(ctx.db),
+        new WhatsAppOutboxRepository(c.get("db")),
       );
       return service.list(input);
     }),
@@ -194,8 +187,8 @@ Service + Repository are instantiated **inside the procedure body** — no share
 2. `schemas.ts` — define `listInputSchema`, optional `getInputSchema`, etc., with zod. Export `ListInput` etc.
 3. `filters.ts` — subclass `Filters<ListInput, TBuilder>`, list filter keys, implement one protected method per key.
 4. `repository.ts` — constructor takes `db`. `list()` builds the chain, applies filters twice (rows + count), returns `{ rows, total }`. Single-record helpers (`findById`) return `T | null`.
-5. `service.ts` — constructor takes the repo. Methods mirror the router shape; throw `TRPCError` on not-found / forbidden.
-6. `router.ts` — one tRPC procedure per service method. Instantiate `new Service(new Repository(ctx.db))` inside each body.
+5. `service.ts` — constructor takes the repo. Methods mirror the router shape; throw `ServiceError` on not-found / forbidden.
+6. `router.ts` — one route handler per service method. Instantiate `new Service(new Repository(c.get("db")))` inside each body.
 7. `index.ts` — `export { fooRouter } from "./router";` and types you want consumers to see.
 8. Wire it into `packages/api/src/routers/_app.ts`.
 
@@ -223,8 +216,8 @@ The trigger to migrate is "I'm adding a list endpoint with at least one filter" 
 
 ## Conventions baked into the pattern
 
-- **Router is `publicProcedure` or `protectedProcedure` — never both at once for a single feature.** If a feature has both public and private endpoints, split into two services that share the repo.
-- **`ctx.db` is the only way Drizzle reaches a feature.** Don't import `db` from `@saas/db` directly inside a feature — always use `ctx.db` so tests can pass a stub.
+- **Router is `a public route` or `an authenticated route` — never both at once for a single feature.** If a feature has both public and private endpoints, split into two services that share the repo.
+- **`c.get("db")` is the only way Drizzle reaches a feature.** Don't import `db` from `@saas/db` directly inside a feature — always use `c.get("db")` so tests can pass a stub.
 - **Zod schemas live in `schemas.ts` and nowhere else.** Consumers (apps/web, apps/admin) re-derive types via `inferRouterInputs<AppRouter>` rather than importing schemas directly.
 - **Empty string === no filter.** The base `apply()` treats `""` as missing on purpose; URL state from `nuqs` defaults to `""`, so the gate works without extra parsing.
 - **Pagination is always 1-based.** `page=1, pageSize=25` is the convention. `total` is returned alongside `rows`.

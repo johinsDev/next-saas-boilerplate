@@ -3,16 +3,9 @@ name: push
 description: Send push notifications from the next-saas-boilerplate monorepo via `@saas/push`. Unified abstraction over Web Push (PWA browsers via VAPID + Service Worker) and Expo Push (future native app). Use when triggering a send (stamp earned, reward ready, redemption confirmed), registering a device token, adding a new transport, switching provider per environment, debugging delivery, asserting sends in tests, or reviewing the `push_outbox`.
 ---
 
-> **Ported from `loyalty-app`, not yet rewritten for the app.** Two things differ:
->
-> - **There is no tRPC here.** The typed API is **Hono RPC** (`hc<AppType>`, types only —
->   no runtime RPC, which is the whole reason we picked it over tRPC).
-> - **Web and admin call `packages/services` directly**, in Server Components and Server
->   Actions. They never hop through the Hono API. Only mobile goes over HTTP.
->
-> Where this file shows a tRPC procedure, read it as a service function. Some packages it
-> names do not exist yet — it describes the target, not the current tree. The
-> `architecture-guard` skill is the authority.
+> **Ported from a production application.** It describes the target architecture, and some
+> packages it names may not exist here yet — treat it as a spec to build against rather
+> than a map of the current tree. `architecture-guard` is the authority.
 
 # @saas/push — provider-agnostic push notifications
 
@@ -36,8 +29,8 @@ What's different: **two production protocols share the same abstraction.** Brows
 | Unit tests | `packages/push/src/__tests__/` |
 | `push_outbox` Drizzle table | `packages/db/src/schema/push-outbox.ts` |
 | `push_token` Drizzle table | `packages/db/src/schema/push-tokens.ts` |
-| tRPC outbox feature | `packages/api/src/features/push-outbox/` |
-| tRPC tokens feature | `packages/api/src/features/push-tokens/` |
+| Hono RPC outbox feature | `packages/api/src/features/push-outbox/` |
+| Hono RPC tokens feature | `packages/api/src/features/push-tokens/` |
 | Web bootstrap | `apps/web/src/lib/push.ts` |
 | Admin bootstrap | `apps/admin/src/lib/push.ts` |
 | Web dev view | `apps/web/app/[locale]/(dev)/push-outbox/` |
@@ -141,7 +134,7 @@ Validated by `apps/{web,admin}/src/env.ts` via `@t3-oss/env-nextjs`. Boot fails 
 
 ## Token registration
 
-Tokens flow `client → tRPC → push_token` so each device is registered before it can receive sends.
+Tokens flow `client → Hono RPC → push_token` so each device is registered before it can receive sends.
 
 ### Browser (PWA)
 
@@ -239,7 +232,7 @@ api.pushOutbox.get({ id });
 api.pushOutbox.latestForRecipient({ deviceToken, limit });
 ```
 
-`publicProcedure` — gated by env at the page + endpoint layer, not by auth.
+`a public route` — gated by env at the page + endpoint layer, not by auth.
 
 ### Tokens
 
@@ -250,7 +243,7 @@ api.pushTokens.revoke({ customerId, organizationId, token });
 api.pushTokens.listForLookup({ customerId, organizationId }); // server-side helper for the auto sender
 ```
 
-`protectedProcedure` — auth required. Future hardening: scope `customerId` by session/active-org (matches the stub `clientes` router's TODO).
+`an authenticated route` — auth required. Future hardening: scope `customerId` by session/active-org (matches the stub `clientes` router's TODO).
 
 ---
 
