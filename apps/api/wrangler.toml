@@ -1,0 +1,9 @@
+name = "saas-api"
+main = "src/index.ts"
+compatibility_date = "2025-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Secrets are set with `wrangler secret put`, never here.
+# [vars] is for non-secret configuration only.
+[vars]
+ENVIRONMENT = "development"

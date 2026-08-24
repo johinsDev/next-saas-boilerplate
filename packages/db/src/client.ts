@@ -25,12 +25,27 @@ let instance: Db | undefined;
  * tRPC context calls this so each request owns its client; long-lived runtimes
  * (Node scripts, jobs) keep using the {@link db} singleton below.
  */
-export function createDb(): Db {
-  const url = process.env.DATABASE_URL;
+export type DbConfig = {
+  readonly url: string;
+  readonly authToken?: string | undefined;
+};
+
+/**
+ * Builds a client.
+ *
+ * Configuration can be passed in, because Workers have no `process.env` worth
+ * reading: their credentials arrive as request bindings, and a client built at
+ * module scope from ambient state works in development and then fails the
+ * moment a second request reuses its I/O. Node callers can omit it and fall
+ * back to the environment.
+ */
+export function createDb(config?: DbConfig): Db {
+  const url = config?.url ?? process.env.DATABASE_URL;
   if (!url) {
     throw new Error("DATABASE_URL is not set");
   }
-  const client = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
+  const authToken = config ? config.authToken : process.env.TURSO_AUTH_TOKEN;
+  const client = createClient({ url, authToken });
   return drizzle(client, { schema, casing: "snake_case" });
 }
 

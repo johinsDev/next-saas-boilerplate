@@ -2,12 +2,15 @@
  * The service layer.
  *
  * Every caller that needs data goes through here: the Next.js apps import it
- * directly and run it in process, and the Hono API calls the same functions
- * behind HTTP for clients that are not our server.
+ * and run it in process, and the Hono API calls the same functions behind HTTP
+ * for clients that are not our server.
  *
- * `server-only` makes "a client component imported a service" a build error
- * instead of a runtime data leak.
+ * There is deliberately no `import "server-only"` here. That guard is a Next.js
+ * construct and it throws anywhere React is not — including inside the Worker
+ * and in a plain test run. It belongs one layer up, in each app's
+ * `<domain>-queries.ts`, which is where a client/server boundary actually
+ * exists. See the `architecture-guard` skill.
  */
-import "server-only";
 
+export * from "./features/_shared/errors";
 export * from "./features/organizations";
