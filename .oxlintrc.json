@@ -1,0 +1,3 @@
+{
+  "extends": ["./packages/tooling/oxlint/.oxlintrc.json"]
+}
