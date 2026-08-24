@@ -1,0 +1,45 @@
+{
+  "name": "@saas/date",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./react": "./src/react/index.ts"
+  },
+  "scripts": {
+    "lint": "oxlint src",
+    "format": "oxlint src --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .turbo node_modules coverage"
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0"
+  },
+  "devDependencies": {
+    "@saas/tsconfig": "workspace:*",
+    "@saas/vitest-config": "workspace:*",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "next-intl": "^4.11.2",
+    "oxlint": "^0.15.0",
+    "react": "^19.2.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "peerDependencies": {
+    "next-intl": "^4.0.0",
+    "react": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "next-intl": { "optional": true },
+    "react": { "optional": true }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "extends": "@saas/tsconfig/base.json",
+  // `react-jsx` + DOM lib so tsc can type-check the `@saas/email-templates`
+  // (.tsx) sources it pulls in for the magic-link + test-email render helpers.
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "jsx": "react-jsx"
+  },
+  "include": ["trigger", "log.ts", "trigger.config.ts"],
+  "exclude": ["node_modules", "dist", ".trigger"]
+}

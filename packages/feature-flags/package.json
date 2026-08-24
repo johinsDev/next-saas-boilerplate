@@ -1,0 +1,55 @@
+{
+  "name": "@saas/feature-flags",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts",
+    "./client": "./src/client.ts",
+    "./react": "./src/react.tsx"
+  },
+  "scripts": {
+    "lint": "oxlint src",
+    "format": "oxlint src --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .turbo node_modules coverage"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@saas/tsconfig": "workspace:*",
+    "@saas/vitest-config": "workspace:*",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "next": "^16.0.0",
+    "oxlint": "^0.15.0",
+    "posthog-js": "^1.180.0",
+    "posthog-node": "^4.7.0",
+    "react": "^19.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "peerDependencies": {
+    "next": "^16.0.0",
+    "posthog-js": "^1.180.0",
+    "posthog-node": "^4.7.0",
+    "react": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    },
+    "posthog-js": {
+      "optional": true
+    },
+    "posthog-node": {
+      "optional": true
+    }
+  }
+}
