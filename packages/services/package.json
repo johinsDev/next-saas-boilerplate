@@ -1,0 +1,33 @@
+{
+  "name": "@saas/services",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/features/*/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint src",
+    "clean": "rm -rf .turbo coverage *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@saas/auth": "workspace:*",
+    "@saas/db": "workspace:*",
+    "@saas/storage": "workspace:*",
+    "drizzle-orm": "^0.36.0",
+    "mime-types": "^3.0.0",
+    "server-only": "^0.0.1",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@saas/tsconfig": "workspace:*",
+    "@saas/vitest-config": "workspace:*",
+    "@types/mime-types": "^3.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.9"
+  }
+}
