@@ -18,6 +18,13 @@ everything else demonstrable.
 - **Astro landing** — static marketing site, its own deploy, sharing only the design
   tokens. Deliberately not Next: a landing page should not carry a React runtime.
 
+**The app-level libraries arrive with the apps, not before.** `zustand`, `nuqs`,
+`@tanstack/react-query`, `react-hook-form`, `zod` and `motion` are dependencies of a
+Next.js app, not packages of their own — wrapping each in a `packages/*` would add a layer
+that exists only to be maintained. Each already has a skill under `.claude/skills/`, so
+the conventions are settled before the first line is written. Same for SEO: it is metadata
+and route conventions inside `apps/web`, not something to abstract.
+
 ## 2. Billing and entitlements
 
 The largest missing piece, and the one that makes it a SaaS boilerplate rather than an
@@ -48,7 +55,12 @@ Proven in `loyalty-app`, worth lifting once there are apps to attach them to.
 - **Docker** for local services (libSQL, Redis) and for the API image.
 - **Trigger.dev** — `@saas/jobs` is here with the generic tasks; the deploy pipeline
   and per-environment projects are not.
-- **Sentry and Better Stack** — the packages are wired, the projects are not.
+- **Sentry** — nothing here yet, not even a package. In the source application it is
+  wired per app (`@sentry/nextjs`, `@sentry/cloudflare`) rather than abstracted, which is
+  the right call: the SDKs differ enough per runtime that a shared port would only get in
+  the way. There is a `sentry` skill covering the setup.
+- **Better Stack** — `@saas/log` has the transport; the project and the dashboards do not
+  exist.
 
 ## 4. In-app notifications
 
