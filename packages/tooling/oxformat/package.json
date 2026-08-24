@@ -1,0 +1,6 @@
+{
+  "name": "@saas/oxformat-config",
+  "version": "0.0.0",
+  "private": true,
+  "files": [".oxformatrc.json"]
+}

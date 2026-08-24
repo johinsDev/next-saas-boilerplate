@@ -1,0 +1,6 @@
+[install]
+# Hoisted linker is friendlier with Next.js than the default isolated mode.
+linker = "hoisted"
+
+[run]
+bun = true
