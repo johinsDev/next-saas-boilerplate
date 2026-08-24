@@ -1,0 +1,24 @@
+{
+  "name": "@saas/partykit-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/server.ts",
+  "scripts": {
+    "dev": "partykit dev --var REALTIME_AUTH_SECRET=\"$REALTIME_AUTH_SECRET\"",
+    "deploy": "partykit deploy",
+    "lint": "oxlint src",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .turbo .partykit"
+  },
+  "dependencies": {
+    "jose": "^5.9.0",
+    "partykit": "^0.0.111"
+  },
+  "devDependencies": {
+    "@saas/tsconfig": "workspace:*",
+    "@types/node": "^22.0.0",
+    "oxlint": "^0.15.0",
+    "typescript": "^5.9.3"
+  }
+}

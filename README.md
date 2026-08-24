@@ -27,6 +27,8 @@ ROADMAP §1.
 apps/
   api         Hono on Cloudflare Workers. Exports `AppType` for `hc<AppType>`.
 
+partykit/     The realtime server. Its own Cloudflare project, paired with @saas/realtime.
+
 packages/
   db          Drizzle + libSQL/Turso. Auth, audit, outboxes, notifications, settings.
   auth        Better Auth: Google, magic link, phone OTP, organizations, roles, impersonation.

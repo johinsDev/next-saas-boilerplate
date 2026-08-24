@@ -1,0 +1,9 @@
+{
+  "extends": "@saas/tsconfig/base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "WebWorker"],
+    "types": ["partykit/server"]
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", ".partykit"]
+}

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://www.partykit.io/schema.json",
+  "name": "saas-realtime",
+  "main": "src/server.ts",
+  "compatibilityDate": "2026-01-01",
+  "parties": {
+    "user": "src/parties/user.ts",
+    "organization": "src/parties/organization.ts"
+  }
+}

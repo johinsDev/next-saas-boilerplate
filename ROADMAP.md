@@ -13,6 +13,8 @@ everything else demonstrable.
 - **`apps/admin`** — same, behind the role guard in `@saas/auth`.
 - ~~**`apps/api`**~~ — done. Hono on Cloudflare Workers, exporting `AppType`. Still needs
   auth middleware, rate limiting and the observability wiring the packages already provide.
+- **`apps/web` realtime wiring** — `@saas/realtime` and the `partykit/` server are both
+  here; nothing connects them yet because there is no client to connect.
 - **Astro landing** — static marketing site, its own deploy, sharing only the design
   tokens. Deliberately not Next: a landing page should not carry a React runtime.
 
