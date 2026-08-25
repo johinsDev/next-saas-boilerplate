@@ -151,3 +151,26 @@ rounds of work in INTRIGO.
   <PanelLeft aria-hidden className="size-4" />
 </AnimatedSidebarTrigger>
 ```
+
+## Tailwind v4: `scale-*` is not `transform`
+
+`scale-95` compiles to the standalone CSS **`scale`** property, not to `transform`. So
+this animates nothing:
+
+```
+transition-[opacity,transform] data-[starting-style]:scale-95   ✗
+transition-[opacity,scale]     data-[starting-style]:scale-95   ✓
+```
+
+The failure is quiet and half-convincing: the opacity fades on schedule while the panel
+snaps to its final size, which reads as "the animation is a bit off" rather than as a bug.
+It caught both the row-actions menu and `ResponsiveModal`.
+
+Two things to remember when animating a Base UI popup:
+
+- **Name the open end too** (`scale-100`), so both ends of the transition have a value.
+- **Confirm with events, not with eyes**: listen for `transitionrun` on the element and
+  check which `propertyName` fires. If `transform` never appears, it never animated.
+
+`transform-origin` still applies — it governs `scale`, `rotate` and `translate` as well —
+so `[transform-origin:var(--transform-origin)]` on a positioner-anchored popup is right.
