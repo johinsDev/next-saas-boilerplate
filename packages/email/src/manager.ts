@@ -62,11 +62,16 @@ export class EmailManager<
     const definedMailers = Object.fromEntries(
       Object.entries(config.mailers).filter(([, v]) => v !== undefined),
     ) as TMailers;
-    this.#config = {
-      default: config.default,
-      mailers: definedMailers,
-      logLevel: config.logLevel,
-    };
+    /*
+     * Spread, then override the one field that needs reshaping.
+     *
+     * This used to name each field it kept, which silently dropped `queue` the
+     * day it was added — and TypeScript could not see it, because the narrower
+     * object still satisfies the type when the missing field is optional. The
+     * symptom was a config that looked right, an environment that was right,
+     * and mail that still went to a file.
+     */
+    this.#config = { ...config, mailers: definedMailers };
     this.#logger = config.logger;
     this.#logLevel = config.logLevel ?? "info";
   }
@@ -102,10 +107,15 @@ export class EmailManager<
      * the chosen mailer becomes a routing label the worker resolves — this
      * process never touches the provider, which is the point.
      */
-    const transport = this.#config.queue
-      ? new DeferredTransport(this.#config.queue)
-      : createTransport(mailerConfig);
-    const sender = new EmailSender(name, transport, {
+    const deferred = this.#config.queue;
+    const transport = deferred ? new DeferredTransport(deferred) : createTransport(mailerConfig);
+    /*
+     * When deferring, the sender is named after the queue's target rather than
+     * the local mailer key. Otherwise every log line reads `mailer: "folder"`
+     * beside `status: "queued"` and a run id — three fields telling two
+     * different stories about where the mail went.
+     */
+    const sender = new EmailSender(deferred ? deferred.mailer : name, transport, {
       logger: this.#logger,
       logLevel: this.#logLevel,
     });
