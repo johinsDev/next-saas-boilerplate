@@ -63,6 +63,19 @@ export type CreateAuthOptions = {
    * at the wrong app.
    */
   baseURL?: string;
+  /**
+   * Plugins appended after ours, for anything framework-specific.
+   *
+   * The one that matters today is `nextCookies()` from `better-auth/next-js`,
+   * which forwards `Set-Cookie` from a Server Action — without it,
+   * `impersonateUser` succeeds and nothing changes in the browser. It lives in
+   * the Next app rather than here for the same reason `sendMagicLink` does:
+   * the Worker that serves mobile has no business bundling Next.
+   *
+   * Better Auth requires `nextCookies()` to be **last**, which is what
+   * "appended" buys — a caller cannot accidentally put it in the middle.
+   */
+  plugins?: BetterAuthOptions["plugins"];
 };
 
 const PHONE_OTP_WINDOW_SECONDS = 30 * 60;
@@ -132,6 +145,37 @@ const advanced = {
   ...(cookiePrefix && { cookiePrefix }),
 };
 
+type CustomRateLimitRules = NonNullable<NonNullable<BetterAuthOptions["rateLimit"]>["customRules"]>;
+
+/**
+ * The per-endpoint rate limits, behind an **annotated** return type — and that
+ * annotation is load-bearing, not decoration.
+ *
+ * Written inline as `customRules: isLocalDev ? {} : { ... }`, the two branches
+ * give the property a union type, and Better Auth's inference over the whole
+ * options object degrades in response: `auth.api` silently loses **every plugin
+ * endpoint**. `banUser`, `impersonateUser`, `revokeUserSessions`,
+ * `signInMagicLink` all disappear from the type while working perfectly at run
+ * time, and the compiler reports it as "Property does not exist" on a base type
+ * that never mentions rate limiting.
+ *
+ * Nothing called a plugin endpoint until the users roster did, which is why it
+ * went unnoticed. Keep the annotation.
+ */
+function rateLimitRules(isLocalDev: boolean): CustomRateLimitRules {
+  // Local dev keeps the loose defaults so the sign-in flow can be exercised
+  // repeatedly; `wrangler dev` forces APP_ENV="production", hence the baseURL
+  // check rather than an env var.
+  if (isLocalDev) return {};
+
+  return {
+    "/phone-number/send-otp": { window: 60, max: 3 },
+    "/phone-number/verify": { window: 60, max: 5 },
+    "/sign-in/social": { window: 60, max: 10 },
+    "/sign-in/magic-link": { window: 60, max: 3 },
+  };
+}
+
 export function createAuth(
   deps: AuthDeps = {},
   options: CreateAuthOptions = {},
@@ -198,19 +242,7 @@ export function createAuth(
     // `?error=banned` notice renders. Only OAuth-callback errors redirect here;
     // admin (magic-link/password) never reaches this branch.
     onAPIError: { errorURL: `${webURL}/sign-in` },
-    rateLimit: {
-      enabled: true,
-      window: 60,
-      max: 100,
-      customRules: isLocalDev
-        ? {}
-        : {
-            "/phone-number/send-otp": { window: 60, max: 3 },
-            "/phone-number/verify": { window: 60, max: 5 },
-            "/sign-in/social": { window: 60, max: 10 },
-            "/sign-in/magic-link": { window: 60, max: 3 },
-          },
-    },
+    rateLimit: { enabled: true, window: 60, max: 100, customRules: rateLimitRules(isLocalDev) },
     emailAndPassword:
       options.emailAndPasswordEnabled === false
         ? undefined
@@ -313,6 +345,8 @@ export function createAuth(
             }),
           ]
         : []),
+      // Last, always. See `CreateAuthOptions.plugins`.
+      ...(options.plugins ?? []),
     ],
   });
 }

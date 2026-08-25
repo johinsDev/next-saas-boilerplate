@@ -4,6 +4,12 @@
 
 export { cn } from "./cn";
 export { brandForeground, brandThemeCss } from "./brand-theme";
+export { useMediaQuery, DESKTOP_QUERY } from "./use-media-query";
+export { HoverPrefetchLink } from "./hover-prefetch-link";
+export { ResponsiveModal } from "./responsive-modal";
+export { ToastProvider, useToast } from "./toast-provider";
+export { ThemeChoice } from "./theme-choice";
+export { Choicebox, type ChoiceboxOption } from "./choicebox";
 
 export * from "./components/ui/accordion";
 export * from "./components/ui/alert";
@@ -136,3 +142,48 @@ export {
 export { Input as MotionInput, type InputProps as MotionInputProps } from "./components/motion/input";
 export { NumberTicker, type NumberTickerProps } from "./components/motion/number-ticker";
 export { ThemeToggle } from "./components/motion/theme-toggle";
+export { BottomSheet, type BottomSheetProps } from "./components/motion/bottom-sheet";
+
+/*
+ * beUI's popover, prefixed for the same reason as the select: the kit has its
+ * own `Popover` over Base UI, which stays the one for a plain anchored panel.
+ * This one melts out of its trigger, which is worth it where the gesture is
+ * part of the point — an account menu, a quick actions panel.
+ */
+export {
+  Popover as MotionPopover,
+  PopoverContent as MotionPopoverContent,
+  PopoverTrigger as MotionPopoverTrigger,
+  type PopoverProps as MotionPopoverProps,
+} from "./components/motion/popover";
+
+/*
+ * beUI's select, prefixed like `MotionInput` — every part of it would otherwise
+ * collide with the kit's own `Select`, which is the one to reach for in a dense
+ * form. This one is worth the swap where the motion is the point.
+ */
+export {
+  Select as MotionSelect,
+  SelectContent as MotionSelectContent,
+  SelectItem as MotionSelectItem,
+  SelectTrigger as MotionSelectTrigger,
+  SelectValue as MotionSelectValue,
+  type SelectProps as MotionSelectProps,
+} from "./components/motion/select";
+
+/*
+ * **This is the toaster.** `components/ui/sonner.tsx` is still in the tree and
+ * unused; do not wire it up as well. Two stacks means two corners of the screen
+ * arguing about which failure you already dismissed.
+ *
+ * The stack and its hook are exported for anyone who genuinely needs a local
+ * one — reach for `ToastProvider` / `useToast` first.
+ */
+export {
+  AnimatedToastStack,
+  useAnimatedToastStack,
+  type AnimatedToast,
+  type ToastInput,
+  type ToastPosition,
+  type ToastStatus,
+} from "./components/motion/animated-toast-stack";

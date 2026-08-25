@@ -17,7 +17,10 @@
     "db:studio": "drizzle-kit studio",
     "lint": "oxlint src",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf .turbo node_modules"
+    "clean": "rm -rf .turbo node_modules",
+    "db:seed:owner": "bun run src/seed-owner.ts",
+    "db:seed:demo": "bun run src/seed-demo.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",
@@ -26,8 +29,10 @@
   },
   "devDependencies": {
     "@saas/tsconfig": "workspace:*",
+    "@saas/vitest-config": "workspace:*",
     "drizzle-kit": "^0.28.0",
     "oxlint": "^0.15.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.9"
   }
 }

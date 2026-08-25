@@ -122,14 +122,25 @@ const CIRCLE_ORIGIN: Record<RectStart, string> = {
   "bottom-up":   "50% 100%",
 };
 
-export function useThemeToggle({
+/**
+ * The reveal, on its own — **an INTRIGO edit, reapply after an install.**
+ *
+ * Upstream this is welded into `useThemeToggle`, which flips between exactly
+ * two themes. That makes the animation unreachable for any control with a
+ * third position, and "follow the system" is a third position: a two-state
+ * toggle cannot express it, so somebody who never touched it is shown a state
+ * they did not choose and cannot get back to.
+ *
+ * Splitting it changes no behaviour — `useThemeToggle` is now written in terms
+ * of this — and lets `ThemeChoice` set any theme with the same reveal.
+ */
+export function useThemeTransition({
   variant = "rectangle",
   start = "bottom-up",
 }: { variant?: ThemeVariant; start?: RectStart } = {}) {
-  const { setTheme, resolvedTheme } = useTheme();
+  const { setTheme } = useTheme();
   const reduce = useReducedMotion() ?? false;
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     if (document.getElementById(VT_STYLE_ID)) return;
     const el = document.createElement("style");
@@ -137,11 +148,8 @@ export function useThemeToggle({
     el.textContent = VT_CSS;
     document.head.appendChild(el);
   }, []);
-  const isDark = mounted && resolvedTheme === "dark";
 
-  const toggle = () => {
-    const next = isDark ? "light" : "dark";
-
+  return (next: string) => {
     if (reduce || !("startViewTransition" in document)) {
       setTheme(next);
       return;
@@ -170,6 +178,19 @@ export function useThemeToggle({
       delete root.dataset.beuiVt;
     });
   };
+}
+
+export function useThemeToggle({
+  variant = "rectangle",
+  start = "bottom-up",
+}: { variant?: ThemeVariant; start?: RectStart } = {}) {
+  const { resolvedTheme } = useTheme();
+  const applyTheme = useThemeTransition({ variant, start });
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted && resolvedTheme === "dark";
+
+  const toggle = () => applyTheme(isDark ? "light" : "dark");
 
   return { isDark, mounted, toggle };
 }

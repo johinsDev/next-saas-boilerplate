@@ -8,6 +8,11 @@
   pages, `use cache`, Suspense placement, prefetch tiers. Vendored (MIT); read the
   amendment in `architecture-guard`, which says where we differ.
 - **`.claude/skills/features`** — how a feature is laid out.
+- **`.claude/skills/crud-screens`** — how a list screen and a detail screen are built:
+  routes, URL state, what is cached and what deliberately is not, the SQL invariants that
+  only break past the first page, table-above-`md`/cards-below, row actions and toasts.
+  Read it before adding any admin list — it is there so none of this has to be explained
+  again per screen.
 - **[ROADMAP.md](./ROADMAP.md)** — what is deliberately missing. Check it before building
   something that is already planned in a particular shape.
 

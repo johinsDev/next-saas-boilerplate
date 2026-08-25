@@ -1,9 +1,8 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard } from "lucide-react";
 import { motion } from "motion/react";
 import {
   AnimatedSidebar,
@@ -16,9 +15,13 @@ import {
   AnimatedSidebarMenu,
   AnimatedSidebarMenuButton,
   AnimatedSidebarMenuItem,
+  AnimatedSidebarMenuSub,
+  AnimatedSidebarMenuSubButton,
+  AnimatedSidebarMenuSubItem,
   AnimatedSidebarRail,
-  ThemeToggle,
 } from "@saas/ui";
+
+import { isWithin, PEOPLE, SECTIONS } from "./nav";
 
 /**
  * The sidebar's links, as `next/link` rather than the plain `<a>` beUI renders.
@@ -26,7 +29,7 @@ import {
  * beUI is framework-agnostic, so `href` on a menu button is an anchor — a full
  * page load. That costs three things at once: client-side navigation, the
  * prefetch `partialPrefetching` sets up, and every provider's state above it
- * (the sidebar springs back open on every click, which is how it was noticed).
+ * (the sidebar sprang back open on every click, which is how this was found).
  *
  * Module scope, not inside the component. `motion.create` returns a new
  * component type on every call, and a new type makes React unmount and remount
@@ -34,16 +37,7 @@ import {
  */
 const MotionLink = motion.create(Link);
 
-/**
- * The admin's navigation.
- *
- * It lists **only what exists**. A menu full of entries that go nowhere is
- * worse than a short one: it trains everybody to ignore the sidebar, and it
- * hides which parts of the product are actually built.
- */
-const SECTIONS = [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }] as const;
-
-export function ShellSidebar() {
+export function ShellSidebar({ viewer }: { viewer: ReactNode }) {
   return (
     <AnimatedSidebar>
       <AnimatedSidebarHeader>
@@ -68,7 +62,7 @@ export function ShellSidebar() {
              * `usePathname` is dynamic under `cacheComponents`, so reading it
              * would drag the whole sidebar out of the static shell. One
              * boundary around the list, with a fallback of the *same* items at
-             * `isActive=false`, keeps the shape identical — React reconciles
+             * `activeHref=null`, keeps the shape identical — React reconciles
              * the resolved tree in place instead of swapping elements, so
              * nothing moves and nothing flashes.
              */}
@@ -79,12 +73,13 @@ export function ShellSidebar() {
         </AnimatedSidebarGroup>
       </AnimatedSidebarContent>
 
-      <AnimatedSidebarFooter>
-        <span className="flex items-center gap-2 px-2 py-1.5">
-          <ThemeToggle />
-          <span className="truncate text-xs text-muted-foreground">Appearance</span>
-        </span>
-      </AnimatedSidebarFooter>
+      {/*
+       * The viewer chip, passed in from the layout as a server-rendered slot.
+       * The sidebar is a Client Component and the session is a server read, so
+       * it arrives as `children` rather than being fetched here — that is what
+       * keeps `getViewer` on the server and out of this bundle.
+       */}
+      <AnimatedSidebarFooter>{viewer}</AnimatedSidebarFooter>
 
       <AnimatedSidebarRail />
     </AnimatedSidebar>
@@ -97,6 +92,18 @@ function ActiveSections() {
 }
 
 function Sections({ activeHref }: { activeHref: string | null }) {
+  const within = (href: string) => isWithin(activeHref, href);
+
+  const peopleActive = PEOPLE.items.some((item) => within(item.href));
+
+  /*
+   * Open when you are inside it, and openable when you are not. Seeded from the
+   * path rather than defaulted shut, so landing on `/staff` from a link does
+   * not show a collapsed group with no sign of where you are.
+   */
+  const [peopleOpen, setPeopleOpen] = useState(peopleActive);
+  const open = peopleOpen || peopleActive;
+
   return (
     <AnimatedSidebarMenu>
       {SECTIONS.map(({ href, label, icon: Icon }) => (
@@ -105,13 +112,44 @@ function Sections({ activeHref }: { activeHref: string | null }) {
             href={href}
             linkAs={MotionLink}
             icon={<Icon aria-hidden className="size-4" />}
-            // `startsWith` so a future `/members/<id>` still lights its section.
-            isActive={activeHref === href || (activeHref?.startsWith(`${href}/`) ?? false)}
+            isActive={within(href)}
           >
             {label}
           </AnimatedSidebarMenuButton>
         </AnimatedSidebarMenuItem>
       ))}
+
+      <AnimatedSidebarMenuItem>
+        <AnimatedSidebarMenuButton
+          icon={<PEOPLE.icon aria-hidden className="size-4" />}
+          // No `href`: the parent is a disclosure, not a destination.
+          onSelect={() => setPeopleOpen((current) => !current)}
+          // Passing `ariaExpanded` at all is what makes the component draw
+          // its own disclosure chevron and rotate it. A `badge` chevron here
+          // would be a second one beside it.
+          ariaExpanded={open}
+          // Active when a child is, so a collapsed group still shows you are
+          // somewhere inside it.
+          isActive={peopleActive && !open}
+        >
+          {PEOPLE.label}
+        </AnimatedSidebarMenuButton>
+
+        <AnimatedSidebarMenuSub open={open}>
+          {PEOPLE.items.map(({ href, label, icon: Icon }) => (
+            <AnimatedSidebarMenuSubItem key={href}>
+              <AnimatedSidebarMenuSubButton
+                href={href}
+                linkAs={MotionLink}
+                icon={<Icon aria-hidden className="size-3.5" />}
+                isActive={within(href)}
+              >
+                {label}
+              </AnimatedSidebarMenuSubButton>
+            </AnimatedSidebarMenuSubItem>
+          ))}
+        </AnimatedSidebarMenuSub>
+      </AnimatedSidebarMenuItem>
     </AnimatedSidebarMenu>
   );
 }

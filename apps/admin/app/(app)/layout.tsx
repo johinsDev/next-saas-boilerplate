@@ -1,8 +1,15 @@
 import { Suspense, type ReactNode } from "react";
-import { AnimatedSidebarInset, AnimatedSidebarProvider, AnimatedSidebarTrigger } from "@saas/ui";
+import { AnimatedSidebarInset, AnimatedSidebarProvider } from "@saas/ui";
 
-import { Gate, GateFallback, ViewerBadge, ViewerBadgeSkeleton } from "@/features/auth/viewer-badge";
+import {
+  Gate,
+  GateFallback,
+  ViewerBadge,
+  ViewerBadgeSkeleton,
+} from "@/features/auth/viewer-badge";
+import { ShellHeader, ShellHeaderSkeleton } from "@/features/shell/shell-header";
 import { ShellSidebar } from "@/features/shell/shell-sidebar";
+import { ImpersonationBar } from "@/features/users/components/impersonation-bar";
 
 /**
  * Everything under this layout is staff-only.
@@ -26,23 +33,40 @@ import { ShellSidebar } from "@/features/shell/shell-sidebar";
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <AnimatedSidebarProvider>
-      <ShellSidebar />
-
-      <AnimatedSidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-4 border-b border-border bg-card px-4 sm:px-6">
-          <AnimatedSidebarTrigger />
-
-          <div className="grow" />
-
-          {/*
-           * Its own boundary. Who you are is worth knowing but not worth
-           * waiting for — sharing the gate's boundary would hold the whole page
-           * for an avatar.
-           */}
+      {/*
+       * The viewer chip is passed as a slot rather than fetched inside the
+       * sidebar. The sidebar is a Client Component; the session is a server
+       * read. Composing them this way keeps `getViewer` on the server and out
+       * of the client bundle, and keeps its boundary here with the others.
+       */}
+      <ShellSidebar
+        viewer={
           <Suspense fallback={<ViewerBadgeSkeleton />}>
             <ViewerBadge />
           </Suspense>
-        </header>
+        }
+      />
+
+      <AnimatedSidebarInset>
+        {/*
+         * Above the header, and in the layout rather than on any one page:
+         * impersonation follows you everywhere, so the reminder has to too.
+         * Its own boundary with no fallback — an empty band is the honest
+         * placeholder, since the ordinary case renders nothing at all and a
+         * skeleton would announce a warning that never arrives.
+         */}
+        <Suspense fallback={null}>
+          <ImpersonationBar />
+        </Suspense>
+
+        {/*
+         * `usePathname` is dynamic under `cacheComponents`, so the header sits
+         * behind its own boundary — same shape, minus the title, so the toggle
+         * does not move when the name lands.
+         */}
+        <Suspense fallback={<ShellHeaderSkeleton />}>
+          <ShellHeader />
+        </Suspense>
 
         <Suspense fallback={<GateFallback />}>
           <Gate>{children}</Gate>

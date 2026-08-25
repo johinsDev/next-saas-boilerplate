@@ -22,6 +22,8 @@
     "clean": "turbo run clean && rm -rf node_modules .turbo",
     "db:generate": "bun run --cwd packages/db db:generate",
     "db:migrate": "bun run --cwd packages/db db:migrate",
+    "db:seed:owner": "bun run --cwd packages/db db:seed:owner",
+    "db:seed:demo": "bun run --cwd packages/db db:seed:demo",
     "db:studio": "bun run --cwd packages/db db:studio",
     "prepare": "lefthook install || true",
     "jobs:dev": "bun run --cwd packages/jobs trigger:dev",

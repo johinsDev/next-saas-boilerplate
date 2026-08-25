@@ -24,6 +24,15 @@ export type Viewer = {
   readonly name: string | null;
   readonly role: Role;
   readonly organizationId: string | null;
+  /**
+   * The id of whoever is impersonating this account, or null.
+   *
+   * Read here rather than anywhere else because this is the one function that
+   * sees the session row, and because the impersonation bar must never be able
+   * to disagree with the session it is describing — a bar that has gone stale
+   * is somebody acting on a colleague's account believing it is their own.
+   */
+  readonly impersonatedBy: string | null;
 };
 
 /**
@@ -69,6 +78,7 @@ export async function getViewer(): Promise<Viewer | null> {
     // No membership row means `customer` — signed in, but not staff.
     role: coerceRole(row?.role),
     organizationId: row?.organizationId ?? null,
+    impersonatedBy: session.session.impersonatedBy ?? null,
   };
 }
 

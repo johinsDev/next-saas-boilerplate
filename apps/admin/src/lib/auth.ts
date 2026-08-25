@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAuth } from "@saas/auth/server";
+import { nextCookies } from "better-auth/next-js";
 import { renderMagicLinkEmail } from "@saas/email-templates";
 
 import { email } from "./email";
@@ -29,5 +30,17 @@ export const auth = createAuth(
       });
     },
   },
-  { baseURL: appUrl, emailAndPasswordEnabled: false },
+  {
+    baseURL: appUrl,
+    emailAndPasswordEnabled: false,
+    /*
+     * Lets a Server Action's `Set-Cookie` reach the browser. Impersonation is
+     * what needs it: `auth.api.impersonateUser` mints a session and hands back
+     * the cookie that switches you into it, and without this the call succeeds
+     * while nothing on screen changes.
+     *
+     * Must be last in the plugin list — `createAuth` appends it, so it is.
+     */
+    plugins: [nextCookies()],
+  },
 );

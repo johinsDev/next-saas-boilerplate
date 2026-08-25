@@ -40,6 +40,10 @@ partykit/     The realtime server. Its own Cloudflare project, paired with @saas
 
 packages/
   db          Drizzle + libSQL/Turso. Auth, audit, outboxes, notifications, settings.
+              `db:migrate`, then `db:seed:owner <email>` to create the first
+              owner. `db:seed:demo` adds sample accounts for the roster.
+              The client is HTTP-only, so point DATABASE_URL at a reachable
+              libsql — `turso dev` locally.
   auth        Better Auth: Google, magic link, phone OTP, organizations, roles, impersonation.
   services    The service layer. Every caller goes through here.
   ui          81 Base UI + Tailwind components, plus beUI's animated set. Web only.
