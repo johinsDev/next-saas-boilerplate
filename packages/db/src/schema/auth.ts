@@ -64,6 +64,16 @@ export const account = sqliteTable("account", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
+  /**
+   * The OIDC issuer, e.g. `https://accounts.google.com`.
+   *
+   * Better Auth 1.7 added this and looks accounts up by it during the social
+   * callback. A missing column does not raise "unknown field" — the adapter
+   * renders an empty identifier and SQLite fails with `near "=": syntax
+   * error`, which says nothing about what is wrong. Nullable, because rows
+   * created before it existed have no issuer.
+   */
+  issuer: text("issuer"),
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
