@@ -9,11 +9,11 @@
     "./trigger/*": "./trigger/*.ts"
   },
   "scripts": {
-    "dev": "trigger dev",
-    "deploy": "trigger deploy",
     "lint": "oxlint trigger",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf .turbo .trigger node_modules"
+    "clean": "rm -rf .turbo .trigger node_modules",
+    "trigger:dev": "trigger dev",
+    "trigger:deploy": "trigger deploy"
   },
   "dependencies": {
     "@saas/db": "workspace:*",
