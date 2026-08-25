@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
 import { PATHNAME_HEADER } from "@/lib/proxy-headers";
+import { isPublic } from "@/lib/public-paths";
 
 /**
  * The coarse gate: turn away anyone with no session cookie before we render a
@@ -23,19 +24,6 @@ import { PATHNAME_HEADER } from "@/lib/proxy-headers";
  * `__Secure-` prefix in production and about `AUTH_COOKIE_PREFIX`. Hand-rolling
  * the cookie name here is how a deploy silently signs everybody out.
  */
-
-/**
- * Reachable with no session.
- *
- * `/api/auth` is not optional: the OAuth and magic-link callbacks arrive
- * *before* a cookie exists. Redirect those and sign-in cannot complete at all —
- * the failure looks like "Google is broken", not like a proxy rule.
- */
-const PUBLIC_PREFIXES = ["/sign-in", "/api/auth"] as const;
-
-function isPublic(pathname: string): boolean {
-  return PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-}
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;

@@ -1,0 +1,6 @@
+/*
+ * The kit owns the tokens and the Tailwind entry point; the app just imports
+ * it. Keeping one stylesheet means a component installed into `@saas/ui` is
+ * styled identically in every app that renders it.
+ */
+@import "@saas/ui/styles/globals.css";
