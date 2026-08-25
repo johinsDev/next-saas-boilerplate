@@ -4,6 +4,9 @@
 
 - **`.claude/skills/architecture-guard`** — where data access lives. It is the authority
   and it overrides any skill that disagrees.
+- **`.claude/skills/nextjs-app-architecture`** — how a Next 16 screen is built: synchronous
+  pages, `use cache`, Suspense placement, prefetch tiers. Vendored (MIT); read the
+  amendment in `architecture-guard`, which says where we differ.
 - **`.claude/skills/features`** — how a feature is laid out.
 - **[ROADMAP.md](./ROADMAP.md)** — what is deliberately missing. Check it before building
   something that is already planned in a particular shape.
@@ -22,6 +25,26 @@
   `packages/services/src/features/_shared/errors.ts`.
 - **A new provider integration is an adapter behind the existing port**, with a fake, not
   a new package.
+
+## Next.js: read the docs we actually run
+
+**Next 16 ships version-matched documentation inside `node_modules/next/dist/docs/`**
+(`01-app`, `02-pages`, `03-architecture`). That is the authority — over training data, over
+blog posts, and over any example repo, several of which run preview builds carrying APIs
+that never shipped.
+
+```bash
+ls node_modules/next/dist/docs/01-app/03-api-reference/01-directives/    # use-cache*, ...
+grep -rl partialPrefetching node_modules/next/dist/docs/
+```
+
+Why it matters concretely: the `next-beats` reference app sets
+`export const prefetch = 'allow-runtime'` on every page. That value **does not exist** in
+the 16.3 we run — the shipped set is `'auto' | 'partial' | 'force-disabled'`. The bundled
+docs say so; the repo does not.
+
+`next dev` writes and maintains its own block in each app's `AGENTS.md` pointing at those
+docs. Leave it in place and commit it.
 
 ## Commands
 

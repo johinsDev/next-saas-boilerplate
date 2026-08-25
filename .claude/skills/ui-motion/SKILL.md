@@ -146,3 +146,43 @@ Use `AnimatePresence` for enter/exit (e.g. a label that grows in). Don't reach f
 4. A "win" moment (reward earned)? `celebrate()`.
 5. An element that should slide/morph between states? framer `motion` + `layoutId`, and make sure the component stays mounted.
 6. Verify with `prefers-reduced-motion: reduce` on — everything should render in place, no animation.
+
+## Debugging motion: two traps that waste an afternoon
+
+Both of these were paid for once already. Neither is a bug in your code, and both make the
+browser lie to you.
+
+### Development doubles your effects
+
+**React Strict Mode is on by default in the App Router**, and in development it invokes
+every effect twice on mount — effect, cleanup, effect. Motion restarts, and the result
+reads as "it animates, then animates again at the end". It does not happen in
+`next start`.
+
+> **Before changing an animation because it looks wrong, check it against a production
+> build.** `bun run build && bun run start`. If the artifact is gone, there was nothing to
+> fix, and a speculative patch to a vendored component is pure maintenance debt.
+
+### A backgrounded tab freezes animation *and* your measurements
+
+Chrome pauses `requestAnimationFrame` and throttles timers to roughly one per second in a
+tab that is not in the foreground. Two consequences:
+
+- **Motion never runs**, so a number ticker sits at `00` and a transition never starts.
+  That is throttling, not a broken component.
+- **Any timing you measure from the page is silently wrong.** A sampling loop that should
+  run at 90 Hz runs at 1 Hz and quietly reports "nothing happened".
+
+If you measure animation from JavaScript, make the script report its own sample rate and
+refuse to draw a conclusion below ~30 Hz:
+
+```ts
+const rate = ticks / (elapsedMs / 1000);
+return { rate, trustworthy: rate > 30, /* … */ };
+```
+
+### `getAnimations()` does not see transforms
+
+Motion drives transforms through its own rAF loop, not the Web Animations API. A
+`getAnimations()` audit shows `filter` and `opacity` and misses the movement entirely —
+sample the computed transform instead, or you will conclude an animation never ran.
