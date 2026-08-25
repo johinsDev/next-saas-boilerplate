@@ -131,15 +131,19 @@ bun run --cwd packages/jobs dev      # local worker, picks up task changes
 bun run --cwd packages/jobs deploy
 ```
 
-**Email goes through the queue in production and stays local in development.** The apps
-defer when `EMAIL_QUEUE` is set and deliver locally when it is not, so a fresh clone can
-sign in with `bun run dev` and nothing else running — needing a queue to read your own
-magic link is how a boilerplate gets abandoned in the first ten minutes.
+**Email is queued by default, wherever a queue is reachable.** With
+`EMAIL_PROVIDER=folder` that gives you the real deferred path locally, with the *worker*
+writing an HTML file you can open — no provider account, and local rehearses production's
+shape rather than a simplified version of it. Bugs that only appear once mail is deferred
+then show up on a laptop instead of in production.
 
-It is `EMAIL_QUEUE` rather than the presence of `TRIGGER_SECRET_KEY` because those are two
-different facts. The worker needs its credentials wherever it runs, laptops included, and
-having them there must not silently divert an app's mail to a provider nobody wanted
-locally. `EMAIL_QUEUE=1 bun run dev` exercises the real queue when you want it.
+With no Trigger project configured it falls back to direct delivery, so a fresh clone
+still signs in with `bun run dev` and nothing else running — needing a queue to read your
+own magic link is how a boilerplate gets abandoned in the first ten minutes.
+
+`EMAIL_QUEUE=false` forces direct delivery; `true` demands the queue and fails loudly if
+it is missing. The two axes stay independent: turning the queue on never changes *where* a
+message lands, only *when*.
 
 **A queue is not a provider.** A provider answers *where* the mail goes — Resend, a file,
 a table. The queue answers *when*. They are separate fields, because folding them into one

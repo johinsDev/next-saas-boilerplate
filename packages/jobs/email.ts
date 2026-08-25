@@ -11,8 +11,15 @@ import { log } from "./log";
  * Lazy: the manager (which reads the validated `env`) is built on first use,
  * not at import — so `trigger deploy` can index task files with no env present.
  */
-function pickDefaultProvider(): "log" | "outbox" | "resend" {
-  if (env.EMAIL_PROVIDER && env.EMAIL_PROVIDER !== "folder") {
+/*
+ * `folder` is honoured here for one reason: running the queue locally without a
+ * provider account, so the worker writes a file you can open instead of
+ * reaching for Resend. In a deployed worker that file lands on an ephemeral
+ * container filesystem where nobody will ever see it — which is worse than a
+ * log line, so do not select it there.
+ */
+function pickDefaultProvider(): "log" | "outbox" | "resend" | "folder" {
+  if (env.EMAIL_PROVIDER) {
     return env.EMAIL_PROVIDER;
   }
   if (process.env.VERCEL_ENV === "production") return "resend";
@@ -33,6 +40,8 @@ function build() {
     default: pickDefaultProvider(),
     mailers: {
       log: { provider: "log", logger: log },
+      // Local only — see `pickDefaultProvider`.
+      folder: { provider: "folder", outputDir: ".email-previews", openInBrowser: true },
       outbox: { provider: "outbox", db },
       resend: resendConfig,
     },
