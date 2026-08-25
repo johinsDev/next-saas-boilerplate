@@ -117,3 +117,24 @@ The toggle is the right control for a rail and the wrong one for a menu: it cann
 "follow the system", so somebody who has never touched it is shown a state they did not
 choose and cannot get back to. It keeps the View Transition; the circular reveal belongs to
 `ThemeToggle`'s own two-state toggle and stays there.
+
+## `theme-toggle.tsx` carries an edit too
+
+`useThemeTransition` is the View Transition machinery split out of
+`useThemeToggle`. Upstream welds them together, and `useThemeToggle` flips
+between exactly two themes — which puts the animation out of reach of any control
+with a third position. "Follow the system" is a third position, and a control
+that cannot express it shows somebody a state they never chose.
+
+Nothing about the reveal changed: `useThemeToggle` is now written in terms of the
+split-out hook. Reapply after an install, or `ThemeChoice` stops animating.
+
+## The popover's neck
+
+beUI's `MotionPopover` melts its panel out of its trigger: `gooStrength` feeds a
+Gaussian blur, and the sharpening pass behind it fuses nearby shapes into one —
+which is what draws the tail between panel and trigger. It suits a floating
+toolbar and it looks like a mistake on a menu anchored to a sidebar.
+
+`gooStrength={0}` gives a detached panel and keeps the morph. Reach for it
+whenever the trigger is part of a surface rather than sitting on its own.

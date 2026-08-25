@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { useReducedMotion } from "motion/react";
 import { Monitor, Moon, Sun } from "lucide-react";
 
 import { cn } from "./cn";
+import {
+  useThemeTransition,
+  type RectStart,
+  type ThemeVariant,
+} from "./components/motion/theme-toggle";
 
 /**
  * Light, dark, or whatever the system says — as one segmented control.
@@ -15,10 +19,11 @@ import { cn } from "./cn";
  * system", so somebody who has never touched it is shown a state they did not
  * choose and cannot get back to.
  *
- * The circular reveal stays behind: that effect is built into `ThemeToggle`
- * around its own two-state toggle. What is kept is the View Transition itself,
- * so the repaint cross-fades instead of snapping — and it is skipped entirely
- * when the browser has no support or the viewer asked for less motion.
+ * The reveal is the same one `ThemeToggle` does — `useThemeTransition` is that
+ * machinery split out of it, because upstream welds it to a two-state flip and
+ * a third position could not reach it. Same CSS, same durations, skipped
+ * entirely when the browser has no View Transition support or the viewer asked
+ * for less motion.
  */
 
 const CHOICES = [
@@ -27,9 +32,22 @@ const CHOICES = [
   { value: "dark", label: "Dark", Icon: Moon },
 ] as const;
 
-export function ThemeChoice({ className }: { className?: string }) {
-  const { theme, setTheme } = useTheme();
-  const reduce = useReducedMotion() ?? false;
+export function ThemeChoice({
+  className,
+  /*
+   * A circle growing from the control, rather than the rail's upward wipe.
+   * Defaults suit a menu anchored at the foot of a sidebar, which is where
+   * this lives; a control somewhere else should say so.
+   */
+  variant = "circle-blur",
+  start = "bottom-left",
+}: {
+  className?: string;
+  variant?: ThemeVariant;
+  start?: RectStart;
+}) {
+  const { theme } = useTheme();
+  const applyTheme = useThemeTransition({ variant, start });
 
   /*
    * `theme` is read from storage on the client, so it is `undefined` on the
@@ -39,17 +57,6 @@ export function ThemeChoice({ className }: { className?: string }) {
    */
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-
-  const choose = (next: string) => {
-    if (reduce || !("startViewTransition" in document)) {
-      setTheme(next);
-      return;
-    }
-
-    (
-      document as Document & { startViewTransition(cb: () => void): unknown }
-    ).startViewTransition(() => setTheme(next));
-  };
 
   return (
     <div
@@ -69,7 +76,7 @@ export function ThemeChoice({ className }: { className?: string }) {
             type="button"
             role="radio"
             aria-checked={selected}
-            onClick={() => choose(value)}
+            onClick={() => applyTheme(value)}
             title={label}
             className={cn(
               "flex size-6 items-center justify-center rounded-full transition-colors",
