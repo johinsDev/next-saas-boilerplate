@@ -127,9 +127,13 @@ of the weight:
 `realtime.ts`) so a task uses the same ports the apps do.
 
 ```bash
-bun run --cwd packages/jobs dev      # local worker, picks up task changes
-bun run --cwd packages/jobs deploy
+bun run jobs:dev       # local worker, picks up task changes
+bun run jobs:deploy
 ```
+
+Deliberately **not** called `dev`. `turbo run dev` starts every package that has a `dev`
+script, and a worker that cannot reach Trigger — no account yet, no credentials on this
+machine — would take the whole repo's dev command down with it.
 
 **Email is queued by default, wherever a queue is reachable.** With
 `EMAIL_PROVIDER=folder` that gives you the real deferred path locally, with the *worker*

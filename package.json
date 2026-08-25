@@ -23,7 +23,9 @@
     "db:generate": "bun run --cwd packages/db db:generate",
     "db:migrate": "bun run --cwd packages/db db:migrate",
     "db:studio": "bun run --cwd packages/db db:studio",
-    "prepare": "lefthook install || true"
+    "prepare": "lefthook install || true",
+    "jobs:dev": "bun run --cwd packages/jobs trigger:dev",
+    "jobs:deploy": "bun run --cwd packages/jobs trigger:deploy"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
