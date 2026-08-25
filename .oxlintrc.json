@@ -1,3 +1,17 @@
 {
-  "extends": ["./packages/tooling/oxlint/.oxlintrc.json"]
+  "extends": [
+    "./packages/tooling/oxlint/.oxlintrc.json"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "packages/ui/src/components/motion/**",
+        "packages/ui/src/lib/**"
+      ],
+      "rules": {
+        "react/no-array-index-key": "off",
+        "react/jsx-key": "off"
+      }
+    }
+  ]
 }
