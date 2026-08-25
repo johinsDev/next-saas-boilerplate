@@ -14,7 +14,8 @@
   "scripts": {
     "lint": "oxlint src",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf .turbo node_modules"
+    "clean": "rm -rf .turbo node_modules",
+    "test": "vitest run"
   },
   "dependencies": {
     "@saas/db": "workspace:*",
@@ -26,7 +27,9 @@
     "next": "^16.0.0",
     "oxlint": "^0.15.0",
     "react": "^19.0.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "@saas/vitest-config": "workspace:*",
+    "vitest": "^2.1.9"
   },
   "peerDependencies": {
     "next": "^16.0.0",

@@ -1,12 +1,14 @@
 import { describe, expect, test } from "vitest";
-import { ROLES } from "@saas/auth";
+import { ROLES } from "./roles";
+import { decideAccess } from "./access";
 
-import { decideAccess, MINIMUM_ADMIN_ROLE } from "./auth-guard";
+const MINIMUM_ADMIN_ROLE = ROLES.staff;
 
 /**
- * The only thing between the open internet and the admin. The decision is a
- * pure function precisely so it can be pinned down without a request, a session
- * or a database.
+ * The only thing between the open internet and a protected page. It is a pure
+ * function precisely so it can be pinned down without a request, a session or a
+ * database — and it is shared, because `apps/web` and `apps/admin` ask the same
+ * question with a different bar.
  */
 
 const STAFF = { userId: "u1" } as const;
@@ -86,5 +88,30 @@ describe("decideAccess", () => {
 
     expect(decideAccess({ ...input, minimum: ROLES.staff }).kind).toBe("allow");
     expect(decideAccess({ ...input, minimum: ROLES.owner }).kind).toBe("forbidden");
+  });
+
+  test("respects a per-app sign-in path", () => {
+    // `apps/web` signs customers in somewhere else than the staff console.
+    const decision = decideAccess({
+      session: null,
+      role: null,
+      minimum: ROLES.customer,
+      pathname: "/account",
+      signInPath: "/login",
+    });
+
+    expect(decision).toEqual({ kind: "redirect", to: "/login?next=%2Faccount" });
+  });
+
+  test("a `customer` minimum means any signed-in visitor passes", () => {
+    // The customer app gates on being signed in at all, not on a staff role.
+    const decision = decideAccess({
+      session: STAFF,
+      role: ROLES.customer,
+      minimum: ROLES.customer,
+      pathname: "/account",
+    });
+
+    expect(decision).toEqual({ kind: "allow", role: ROLES.customer });
   });
 });
