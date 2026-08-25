@@ -116,9 +116,19 @@ repo does not have.
 
 ## 7. Boilerplate hygiene
 
-- **Database migrations.** Dropped on extraction, because they encoded the loyalty
-  domain. Generate a fresh initial migration from the current schema.
-- **A seed** that creates an organization, an owner, and settings.
+- ~~**Database migrations.**~~ Done: `migrations/0000_*.sql`, generated from the current
+  schema.
+- ~~**A seed**~~ Done: `db:seed:owner <email>` creates the organization, the user and the
+  membership, and sets Better Auth's admin capability flag — without which the owner gets
+  403 from impersonation, ban and session revocation. `db:seed:demo` adds 65 sample
+  accounts, every row prefixed `demo_` so `--clear` can never touch a real one.
+  Organization *settings* are still unseeded.
+- **A local database.** `@saas/db` builds its client from `@libsql/client/web`, which
+  speaks only HTTP — deliberate, because the same client runs in a Worker, but it means
+  there is no `file:` or `:memory:` path. `migrate`, both seeds and the users slice's SQL
+  tests all need a reachable libsql (`turso dev`, or Turso itself). The SQL tests skip
+  themselves unless `TEST_DATABASE_URL` is set, and what they cover is not reachable any
+  other way.
 - **`packages/i18n`** — next-intl for web, the same catalogues for mobile.
 - **`packages/design-tokens`** in plain JS, because React Native cannot read CSS.
   `@saas/ui` is web-only: tokens are shared, components are not.

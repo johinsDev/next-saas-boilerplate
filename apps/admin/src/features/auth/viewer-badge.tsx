@@ -61,25 +61,30 @@ export async function ViewerBadge() {
   // rather than a half-built menu.
   if (!viewer) return null;
 
-  return <ViewerMenu email={viewer.email} name={viewer.name} role={viewer.role} />;
+  return (
+    <ViewerMenu
+      email={viewer.email}
+      name={viewer.name}
+      role={viewer.role}
+      impersonating={viewer.impersonatedBy !== null}
+    />
+  );
 }
 
 /**
- * Same height and the same horizontal rhythm as the real menu, so the header
- * does not resize when the session lands. The name block is hidden below `sm`
- * in `ViewerMenu`; it is hidden here too, or the skeleton would be wider than
- * the thing it stands for.
+ * The chip's exact shape, so the foot of the sidebar does not resize when the
+ * session lands. Same padding, same avatar, same two lines of text — a
+ * skeleton of a different height makes the whole sidebar jump.
  */
 export function ViewerBadgeSkeleton() {
   return (
-    <div className="flex items-center gap-3" aria-hidden>
+    <div className="flex w-full items-center gap-2.5 px-2 py-1.5" aria-hidden>
       <span className="size-8 shrink-0 animate-pulse rounded-full bg-muted" />
-      <span className="hidden flex-col gap-1 sm:flex">
+      <span className="flex grow flex-col gap-1">
         <span className="h-3 w-24 animate-pulse rounded bg-muted" />
         <span className="h-2.5 w-32 animate-pulse rounded bg-muted" />
       </span>
-      <span className="h-5 w-14 animate-pulse rounded-full bg-muted" />
-      <span className="h-8 w-20 animate-pulse rounded-md bg-muted" />
+      <span className="size-3.5 shrink-0 animate-pulse rounded bg-muted" />
     </div>
   );
 }

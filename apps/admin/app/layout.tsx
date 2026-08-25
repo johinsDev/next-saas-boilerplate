@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { ToastProvider } from "@saas/ui";
 
 import { ThemeProvider } from "@/features/shell/theme-provider";
@@ -20,6 +21,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
      */
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-dvh antialiased">
+        {/*
+         * nuqs needs to know which router it is driving. Without the adapter
+         * its hooks throw at render — and they throw on the *first* screen that
+         * uses one, not at startup.
+         */}
+        <NuqsAdapter>
         <ThemeProvider>
           {/*
            * One stack for the whole app, mounted here rather than beside
@@ -32,6 +39,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
            */}
           <ToastProvider>{children}</ToastProvider>
         </ThemeProvider>
+        </NuqsAdapter>
       </body>
     </html>
   );

@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./server": "./src/server.ts",
     "./client": "./src/client.ts",
-    "./api-guard": "./src/api-guard.ts"
+    "./api-guard": "./src/api-guard.ts",
+    "./roles": "./src/roles.ts"
   },
   "scripts": {
     "lint": "oxlint src",

@@ -26,6 +26,14 @@ export const ROLES = {
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
+/**
+ * Every role, for anything that has to enumerate them — a filter control, a
+ * role picker, a parser validating what arrived in a query string. One list, so
+ * a role added here appears in all of them rather than in the ones somebody
+ * remembered.
+ */
+export const ALL_ROLES: readonly Role[] = Object.values(ROLES);
+
 export const STAFF_OR_ABOVE: readonly Role[] = [
   ROLES.staff,
   ROLES.manager,
@@ -56,7 +64,7 @@ export function rolesAtOrAbove(min: Role): Role[] {
   return STAFF_OR_ABOVE.filter((r) => RANK[r] >= RANK[min]);
 }
 
-const KNOWN_ROLES: readonly string[] = Object.values(ROLES);
+const KNOWN_ROLES: readonly string[] = ALL_ROLES;
 
 /**
  * Narrows a free-text DB value to a known Role. Falls back to
