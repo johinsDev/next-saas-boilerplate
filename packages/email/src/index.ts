@@ -36,8 +36,11 @@ export type {
   EmailTransport,
   FolderProviderConfig,
   LogProviderConfig,
+  EmailQueueConfig,
   OutboxProviderConfig,
   ProviderConfig,
+  QueuedDispatch,
+  QueuedEmailJob,
   Recipient,
   ResendProviderConfig,
 } from "./types";

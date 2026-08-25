@@ -4,7 +4,7 @@ import { EmailSender } from "./sender";
 import { FolderTransport } from "./transports/folder";
 import { LogTransport } from "./transports/log";
 import { OutboxTransport } from "./transports/outbox";
-import { QueueTransport } from "./transports/queue";
+import { DeferredTransport } from "./transports/deferred";
 import { ResendTransport } from "./transports/resend";
 import type {
   EmailComposeCallback,
@@ -26,8 +26,6 @@ function createTransport(config: ProviderConfig): EmailTransport {
       return new FolderTransport(config);
     case "outbox":
       return new OutboxTransport(config);
-    case "queue":
-      return new QueueTransport(config);
   }
 }
 
@@ -98,7 +96,15 @@ export class EmailManager<
     const cached = this.#sendersCache.get(name);
     if (cached) return cached;
 
-    const transport = createTransport(mailerConfig);
+    /*
+     * Two independent questions, in the order they are asked: `mailers` picked
+     * *where* this goes, and `queue` picks *when*. When a queue is configured
+     * the chosen mailer becomes a routing label the worker resolves — this
+     * process never touches the provider, which is the point.
+     */
+    const transport = this.#config.queue
+      ? new DeferredTransport(this.#config.queue)
+      : createTransport(mailerConfig);
     const sender = new EmailSender(name, transport, {
       logger: this.#logger,
       logLevel: this.#logLevel,

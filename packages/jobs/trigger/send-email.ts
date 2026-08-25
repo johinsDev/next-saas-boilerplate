@@ -1,4 +1,4 @@
-import type { EmailMessageData } from "@saas/email";
+import type { QueuedEmailJob } from "@saas/email";
 import { logger, task } from "@trigger.dev/sdk/v3";
 
 import { email } from "../email";
@@ -7,9 +7,14 @@ import { email } from "../email";
  * Delivers an already-rendered email.
  *
  * The generic counterpart to a per-email task: any app can put any message on
- * the queue by selecting the `queue` provider, with no task to write per
- * message type. The app renders and hands over; this owns the provider call,
- * the retries and the run you can open when somebody says it never arrived.
+ * the queue with no task to write per message type. The app renders, names the
+ * mailer and hands over; this resolves that name against its own credentials
+ * and owns the provider call, the retries and the run you can open when
+ * somebody says it never arrived.
+ *
+ * The mailer travels in the payload rather than being decided here, because
+ * "queue it" and "send it through Resend" are two different questions — and an
+ * app that could only say the first would have no way to say the second.
  *
  * Rendering stays on the request path here, which is a deliberate trade. It
  * costs a few milliseconds and it keeps the payload a plain rendered message,
@@ -23,8 +28,9 @@ export const sendEmailTask = task({
   // The provider, not us, is the flaky part. Retry it rather than dropping a
   // sign-in link because Resend had a bad thirty seconds.
   retry: { maxAttempts: 5 },
-  run: async (message: EmailMessageData) => {
+  run: async ({ mailer, message }: QueuedEmailJob) => {
     logger.info("send-email start", {
+      mailer,
       subject: message.subject,
       recipients: message.to.length,
     });
@@ -34,7 +40,7 @@ export const sendEmailTask = task({
      * rebuilding it through the compose callback would mean re-listing every
      * field — which is how a `cc` or a `replyTo` goes missing in silence.
      */
-    const response = await email.use().sendCompiled(message);
+    const response = await email.use(mailer as never).sendCompiled(message);
 
     logger.info("send-email done", { provider: response.provider, status: response.status });
     return response;

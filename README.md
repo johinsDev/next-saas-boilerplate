@@ -137,21 +137,22 @@ not, so a fresh clone can sign in with `bun run dev` and nothing else running �
 queue to read your own magic link is how a boilerplate gets abandoned in the first ten
 minutes.
 
-The queue is a **transport behind the existing port**, not a parallel path:
+**A queue is not a provider.** A provider answers *where* the mail goes — Resend, a file,
+a table. The queue answers *when*. They are separate fields, because folding them into one
+enum makes the destination unexpressible the moment you defer: you could no longer say
+"queue it, and deliver it through Resend", which is the only thing you ever want to say.
 
 ```ts
 new EmailManager({
-  default: queued ? "queue" : "folder",
-  mailers: {
-    queue: { provider: "queue", dispatch },   // hands the message to a task
-    folder: { provider: "folder", outputDir: ".email-previews" },
-  },
+  default: "folder",                                  // what this process can do itself
+  mailers: { folder: { provider: "folder", … } },
+  queue: queued ? { mailer: "resend", dispatch } : undefined,  // when, and where it lands
 });
 ```
 
 `dispatch` is injected, the same way the outbox transport takes its `db`, so
-`@saas/email` never depends on a queue vendor — and the transport is testable with no
-queue running.
+`@saas/email` never depends on a queue vendor — and the deferral is testable with no queue
+running.
 
 ### Triggering a task from an app
 
@@ -168,9 +169,10 @@ await tasks.trigger<typeof sendEmailTask>("send-email", message);
 
 ### Two shapes of task, and when to use which
 
-- **`send-email`** takes an already-rendered message. One task covers every email in
-  every app: selecting the `queue` provider is the only change. Rendering stays on the
-  request path, which costs milliseconds and keeps the queue ignorant of templates.
+- **`send-email`** takes `{ mailer, message }` — already rendered, with the destination
+  named. One task covers every email in every app. The app names a mailer it holds no
+  credentials for, and the worker resolves it. Rendering stays on the request path, which
+  costs milliseconds and keeps the queue ignorant of templates.
 - **`send-magic-link-email`** takes the *inputs* and renders inside the task. Reach for
   this shape only when the rendering itself is worth moving off the request.
 
