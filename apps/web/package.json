@@ -10,7 +10,7 @@
     "lint": "oxlint app src",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .next .turbo *.tsbuildinfo",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
@@ -29,7 +29,10 @@
     "@saas/email-templates": "workspace:*",
     "server-only": "^0.0.1",
     "@saas/jobs": "workspace:*",
-    "@trigger.dev/sdk": "4.5.6"
+    "@trigger.dev/sdk": "4.5.6",
+    "react-hook-form": "^7.54.0",
+    "@hookform/resolvers": "^5.0.0",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@saas/tsconfig": "workspace:*",
