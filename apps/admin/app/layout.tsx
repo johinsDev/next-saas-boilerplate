@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { ToastProvider } from "@saas/ui";
+
 import { ThemeProvider } from "@/features/shell/theme-provider";
 import "./globals.css";
 
@@ -18,7 +20,18 @@ export default function RootLayout({ children }: { children: ReactNode }) {
      */
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-dvh antialiased">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {/*
+           * One stack for the whole app, mounted here rather than beside
+           * whatever raised the toast: a menu or a modal that reports a result
+           * and then closes would take its own message with it.
+           *
+           * `components/ui/sonner.tsx` is still in the tree and unused. Do not
+           * wire it up as well — two stacks means two corners of the screen
+           * arguing about which failure you already dismissed.
+           */}
+          <ToastProvider>{children}</ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

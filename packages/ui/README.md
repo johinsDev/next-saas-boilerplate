@@ -18,12 +18,12 @@ bunx --bun shadcn@latest add @beui/<name>
 
 The registry is declared in `components.json`.
 
-## Three edits to reapply after an install
+## Edits to reapply after an install
 
 `shadcn add` rewrites files wholesale, so anything we changed inside one comes back. All
-three are mechanical; reapply them and re-run `bun run typecheck`.
+are mechanical; reapply them and re-run `bun run typecheck`.
 
-The first is a portability fix; the other two are upstream bugs, worth reporting back
+The first is a portability fix; the rest are upstream mismatches, worth reporting back
 rather than carrying forever.
 
 **1. Imports must be relative, and `cn` comes from `src/cn.ts`.** This package ships raw
@@ -49,10 +49,13 @@ PY
 rm -f packages/ui/src/lib/utils.ts
 ```
 
-**2. `animated-sidebar.tsx` needs `?.` on its focus-trap calls.** Our tsconfig sets
-`noUncheckedIndexedAccess` and beUI's does not, so `focusable[0]` is `T | undefined` there.
-The early return above it already proves the list is non-empty; the change only tells the
-compiler so. The file carries a comment saying the same thing.
+**2. Indexed access needs a guard.** Our tsconfig sets `noUncheckedIndexedAccess` and
+beUI's does not, so `array[i]` is `T | undefined` here and not there. Two files carry it
+today: `animated-sidebar.tsx` (the focus trap — `focusable[0]`, where the early return
+above already proves the list is non-empty) and `bottom-sheet.tsx` (snap points, where
+`snap` is an index every path clamps to the array). Both changes only tell the compiler
+what the surrounding code already proves. Read the comment at each site before changing a
+fallback: picking the wrong one turns a type error into a silent behaviour change.
 
 **3. `animated-sidebar.tsx` needs its `linkAs` prop back.** This is the one that matters.
 beUI is framework-agnostic, so `href` renders a plain `<a>` — a full page load, which
@@ -78,3 +81,30 @@ Read the debugging section of `.claude/skills/ui-motion`. Two things make the br
 Strict Mode double-invokes effects in development and not in production, and a backgrounded
 tab freezes `requestAnimationFrame` — which both stops motion entirely and makes any
 in-page timing measurement quietly wrong.
+
+## Overlays, and which one to reach for
+
+Three pieces sit on top of beUI rather than inside it, because beUI ships the parts and
+not the policy:
+
+- **`ToastProvider` / `useToast`.** beUI's `useAnimatedToastStack` is local state, which is
+  right for a demo and wrong for an app: a toast raised by a menu has to outlive the menu
+  that raised it, and two components each holding a stack would pile their toasts into the
+  same corner. The provider is mounted once per app, portalled and fixed so no overflow
+  container clips it.
+
+  **`components/ui/sonner.tsx` is still in the tree and unused.** Do not wire it up as
+  well.
+
+- **`ResponsiveModal`.** This kit's `Dialog` on a desktop, beUI's `BottomSheet` on a phone.
+  Two components rather than one restyled: a centred box on a phone puts a form half behind
+  the keyboard with nowhere to scroll. It renders nothing while closed, which is also what
+  makes `useMediaQuery` safe across hydration — by the time anybody opens it, the client
+  knows the real viewport.
+
+- **`useMediaQuery`.** `useSyncExternalStore`, so the server and the first client render
+  agree. `useIsMobile` in `src/hooks/` is the older `useEffect` version and renders `false`
+  once before correcting itself; prefer this one for anything that switches layout.
+
+`MotionSelect` is beUI's select, prefixed because every part of it would otherwise collide
+with the kit's own `Select` — which stays the one to reach for in a dense form.
