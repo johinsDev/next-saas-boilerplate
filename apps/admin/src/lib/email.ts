@@ -15,16 +15,21 @@ import type { sendEmailTask } from "@saas/jobs/trigger/send-email";
  *   to a worker that delivers it through Resend, with retries and a run you can
  *   open when somebody reports a sign-in link that never arrived.
  *
- * Locally the queue is absent and the file lands in `.email-previews/`, so a
- * fresh clone signs in with `bun run dev` and nothing else running. Requiring a
- * queue to read your own magic link is a bad first ten minutes.
+ * Locally neither is set, the file lands in `.email-previews/`, and a fresh
+ * clone signs in with `bun run dev` and nothing else running. Requiring a queue
+ * to read your own magic link is a bad first ten minutes.
  *
- * The switch is the presence of `TRIGGER_SECRET_KEY`, not `NODE_ENV`, so
- * pointing a local run at a real queue is one variable rather than a code
- * change.
+ * **`EMAIL_QUEUE`, not the presence of `TRIGGER_SECRET_KEY`.** Those are two
+ * different facts: the worker needs its credentials in every environment it
+ * runs in, including a laptop, and having them there must not silently divert
+ * this app's mail to a provider nobody wanted locally. Whether the queue is
+ * *reachable* and whether this app should *use* it are separate questions.
+ *
+ * It is also an env var rather than `NODE_ENV`, so exercising the real queue
+ * locally is `EMAIL_QUEUE=1 bun run dev` rather than a code change.
  */
 
-const queued = Boolean(process.env.TRIGGER_SECRET_KEY);
+const queued = ["1", "true", "on"].includes(process.env.EMAIL_QUEUE ?? "");
 
 /**
  * The task is a **type-only** import; the id travels as a string.
