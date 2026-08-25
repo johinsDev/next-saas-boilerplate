@@ -29,7 +29,41 @@ import type { sendEmailTask } from "@saas/jobs/trigger/send-email";
  * locally is `EMAIL_QUEUE=1 bun run dev` rather than a code change.
  */
 
-const queued = ["1", "true", "on"].includes(process.env.EMAIL_QUEUE ?? "");
+/**
+ * Queue by default, wherever a queue is actually reachable.
+ *
+ * Local should rehearse production's shape, not a simplified version of it —
+ * the whole point of a queue is that it changes when things happen, and bugs
+ * that only appear once mail is deferred are exactly the ones worth catching on
+ * a laptop. With `EMAIL_PROVIDER=folder` you get that rehearsal for free: the
+ * worker writes an HTML file you can open, no provider account involved.
+ *
+ * The fallback is for a fresh clone with no Trigger project, where deferring
+ * could only fail. It is **not** the coupling this replaced: back then having
+ * credentials silently rerouted mail to Resend, because the destination was
+ * hardcoded. The destination is `EMAIL_PROVIDER` now, so turning the queue on
+ * cannot change where anything lands.
+ *
+ * `EMAIL_QUEUE=false` forces direct delivery; `true` demands the queue and
+ * fails loudly if it is not configured, rather than quietly doing something
+ * else.
+ */
+const EMAIL_QUEUE = process.env.EMAIL_QUEUE?.toLowerCase();
+const queued =
+  EMAIL_QUEUE === undefined || EMAIL_QUEUE === ""
+    ? Boolean(process.env.TRIGGER_SECRET_KEY)
+    : !["0", "false", "off", "no"].includes(EMAIL_QUEUE);
+
+/**
+ * Where the worker should deliver once the queue is on.
+ *
+ * Hardcoding `resend` here made the two axes only half-independent: you could
+ * say "queue it", but not "queue it and write a file", which is exactly what
+ * you want to exercise the queue locally without a provider account. Reading
+ * `EMAIL_PROVIDER` makes `EMAIL_QUEUE=1 EMAIL_PROVIDER=folder` mean what it
+ * looks like it means.
+ */
+
 
 /**
  * The task is a **type-only** import; the id travels as a string.
@@ -53,5 +87,7 @@ export const email = new EmailManager({
     folder: { provider: "folder", outputDir: ".email-previews", openInBrowser: true },
   },
   // In production, hand off instead — and tell the worker where to deliver.
-  queue: queued ? { mailer: "resend", dispatch } : undefined,
+  // Where the worker delivers: `EMAIL_PROVIDER`, the same "where" axis as
+  // always. The queue only changes *who reads it* — this process or the worker.
+  queue: queued ? { mailer: process.env.EMAIL_PROVIDER ?? "folder", dispatch } : undefined,
 });
