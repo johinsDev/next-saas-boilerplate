@@ -2,7 +2,12 @@
 
 The infrastructure a SaaS needs before it has a product: provider-agnostic packages for
 storage, email, SMS, push, cache, rate limiting, analytics, feature flags, realtime and
-background jobs, plus auth, a database layer, and 81 UI components.
+background jobs, plus auth, a database layer, and a UI kit.
+
+Three apps ship with it — a Hono API, a customer app and a staff console. The two Next
+apps are **reference implementations, not products**: small on purpose, so that the
+conventions are settled and demonstrated before the first screen of an actual product is
+written.
 
 Extracted from a production application, with its domain removed.
 
@@ -13,18 +18,22 @@ entitlements above all.
 
 ```bash
 bun install
-bun run typecheck     # 22 workspaces
+bun run typecheck              # 25 workspaces
 bun run test
-bun run --cwd apps/api dev
+bun run --cwd apps/web dev     # :3000  customer app
+bun run --cwd apps/admin dev   # :3001  staff console
+bun run --cwd apps/api dev     # the Hono Worker
 ```
 
-`apps/api` is here. `apps/web`, `apps/admin` and the Astro landing are not — see
-ROADMAP §1.
+The Astro landing is still missing — see ROADMAP §1, which is also honest about how much
+of the two Next apps is scaffolding.
 
 ## Layout
 
 ```
 apps/
+  web         Next 16. The customer app: public by default, one gated segment.
+  admin       Next 16. The staff console: guarded everywhere, `staff` and above.
   api         Hono on Cloudflare Workers. Exports `AppType` for `hc<AppType>`.
 
 partykit/     The realtime server. Its own Cloudflare project, paired with @saas/realtime.
@@ -33,7 +42,7 @@ packages/
   db          Drizzle + libSQL/Turso. Auth, audit, outboxes, notifications, settings.
   auth        Better Auth: Google, magic link, phone OTP, organizations, roles, impersonation.
   services    The service layer. Every caller goes through here.
-  ui          81 Base UI + Tailwind components. Web only.
+  ui          81 Base UI + Tailwind components, plus beUI's animated set. Web only.
 
   cache · rate-limit · storage · email · email-templates · sms · whatsapp · push ·
   notifications · analytics · feature-flags · realtime · shortlinks · log · date ·
@@ -81,11 +90,39 @@ thrown from a service is meaningless to a Server Action, to a Trigger.dev task, 
 batch job — all of which call the same function with no HTTP in sight. The edge maps the
 code to a status.
 
+**Cache directives never cross into `packages/services`.** `use cache` is a Next compiler
+construct. Put it in the shared package and the same function silently stops caching the
+moment the Worker calls it — one function, two behaviours, and the difference only shows
+up in production. Rows and rules live in `packages/services`; `server-only`, `use cache`,
+`cacheTag` and `cacheLife` live in the app's `<domain>-queries.ts`.
+
 `.claude/skills/architecture-guard` is the authority on all of this.
+
+## How a screen is built
+
+Both Next apps run with `cacheComponents` and `partialPrefetching`, which turns "this page
+is accidentally dynamic" from an invisible cost into a build error. Four rules carry most
+of the weight:
+
+- **Pages are synchronous.** `params.then()` / `searchParams.then()` inside the boundary
+  that owns the fallback — never `await` at the top, which makes the whole route dynamic
+  and leaves nothing to paint while it waits.
+- **The page owns the `<Suspense>`; the feature owns the skeleton**, exported from the
+  same file as the component so the two cannot drift, and shaped to reserve the same
+  height.
+- **`'use cache: private'` is for the session read, and nothing else.** Everything else
+  per-viewer hoists the resolved id out and passes it to a plain `'use cache'` function:
+  privacy comes from the cache key, not from the directive.
+- **Anything private must be dynamic.** A gate in a layout stops dynamic content, not the
+  static shell — a page's headings are built once and stream first. Data read in a query
+  is safe; a name hardcoded into JSX is public.
+
+`.claude/skills/nextjs-app-architecture` is the full version, with the amendment in
+`architecture-guard` for where we differ from it.
 
 ## Skills
 
-- `.agents/skills/` — 103 installed from `skills-lock.json`, not committed. Restore with
+- `.agents/skills/` — 108 installed from `skills-lock.json`, not committed. Restore with
   `npx skills experimental_install`. That command cannot restore `well-known` sources, so
   re-add bun with `npx skills add bun.sh`.
 - `.claude/skills/<name>/` — 39 authored here and committed.
