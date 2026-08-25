@@ -8,9 +8,17 @@ type Payload = {
   url: string;
 };
 
-// Delivers the admin passwordless magic-link by email. Enqueued from the Worker
-// (apps/api/src/lib/auth.ts) so the lean Worker never runs the mailer; the
-// provider (log / outbox / resend) is selected per-env by `../email`.
+/**
+ * Delivers the passwordless magic link, rendering it here rather than on the
+ * request path.
+ *
+ * The variant to reach for when rendering itself is worth moving off the
+ * request: the payload is the *inputs*, and the template never runs in the app.
+ * For everything else `send-email` takes an already-rendered message, so there
+ * is no task to write per message type.
+ *
+ * The provider (log / outbox / resend) is chosen per environment by `../email`.
+ */
 export const sendMagicLinkEmailTask = task({
   id: "send-magic-link-email",
   maxDuration: 30,
@@ -18,7 +26,7 @@ export const sendMagicLinkEmailTask = task({
     logger.info("send-magic-link-email start", { to });
     const html = await renderMagicLinkEmail({ url });
     await email.send((m) => {
-      m.to(to).subject("Tu acceso a Acme Admin").html(html);
+      m.to(to).subject("Your sign-in link").html(html);
     });
     return { ok: true };
   },

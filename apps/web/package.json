@@ -27,7 +27,9 @@
     "react-dom": "^19.2.0",
     "@saas/email": "workspace:*",
     "@saas/email-templates": "workspace:*",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "@saas/jobs": "workspace:*",
+    "@trigger.dev/sdk": "4.5.6"
   },
   "devDependencies": {
     "@saas/tsconfig": "workspace:*",

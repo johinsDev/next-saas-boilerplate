@@ -4,6 +4,7 @@ import { EmailSender } from "./sender";
 import { FolderTransport } from "./transports/folder";
 import { LogTransport } from "./transports/log";
 import { OutboxTransport } from "./transports/outbox";
+import { QueueTransport } from "./transports/queue";
 import { ResendTransport } from "./transports/resend";
 import type {
   EmailComposeCallback,
@@ -25,6 +26,8 @@ function createTransport(config: ProviderConfig): EmailTransport {
       return new FolderTransport(config);
     case "outbox":
       return new OutboxTransport(config);
+    case "queue":
+      return new QueueTransport(config);
   }
 }
 
