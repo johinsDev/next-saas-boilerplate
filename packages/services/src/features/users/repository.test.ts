@@ -7,22 +7,12 @@
  * `ORDER BY` that pages correctly right up until two rows tie. None of it is
  * reachable from `service.test.ts`, and all of it is reachable from the screen.
  *
- * **These do not run by default here, and that is a real gap.** `@saas/db`
- * builds its client from `@libsql/client/web`, which speaks only HTTP — a
- * deliberate choice, because the same client runs in a Cloudflare Worker. It
- * cannot open `:memory:`, so there is no database this suite can conjure for
- * itself.
+ * **These do not run by default here.** `@saas/db` builds its client from
+ * `@libsql/client/web`, which speaks only HTTP — deliberate, because the same
+ * client runs in a Cloudflare Worker. It cannot open `:memory:`.
  *
- * Point `TEST_DATABASE_URL` at a libsql it may create tables in and the whole
- * suite runs:
- *
- *   turso dev --db-file .data/test.db          # or any http libsql
+ *   turso dev --db-file .data/test.db
  *   TEST_DATABASE_URL=http://127.0.0.1:8080 bun run test
- *
- * It is skipped rather than deleted because what it covers — three-valued logic
- * on a nullable column, LIKE wildcards from a search box, an ORDER BY that
- * pages correctly until two rows tie — is reachable from the screen and from
- * nowhere else in the test suite.
  */
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -115,6 +105,12 @@ beforeAll(async () => {
   await insert({ id: "manager_active", role: "manager" });
   await insert({ id: "staff_removed", role: "staff", deletedAt: new Date("2026-06-01") });
   await insert({ id: "staff_banned", role: "manager", banned: true });
+  /*
+   * Banned *and* removed. Without a row in both states the status predicates
+   * can double-count and every test still passes — found by mutation: dropping
+   * `NOT_BANNED` from the `removed` clause changed nothing until this existed.
+   */
+  await insert({ id: "staff_banned_removed", role: "staff", banned: true, deletedAt: new Date("2026-05-01") });
   await insert({ id: "plugin_default", role: "member" });
   await insert({ id: "player_active" });
   await insert({ id: "player_invited", emailVerified: false });
@@ -137,7 +133,7 @@ suite("the status rule, in SQL and in TypeScript", () => {
     const rows = await everyRow();
     expect(rows.length).toBeGreaterThan(0);
 
-    for (const status of ["active", "invited", "disabled"] as const) {
+    for (const status of ["active", "invited", "banned", "removed"] as const) {
       const expected = rows.filter((row) => statusOf(row) === status).length;
 
       // oxlint-disable-next-line no-await-in-loop -- three queries, read in order
@@ -165,16 +161,18 @@ suite("the status rule, in SQL and in TypeScript", () => {
     expect(players.total).toBe(everyone.population.player);
     expect(staff.total + players.total).toBe(everyone.total);
     // And within a scope the statuses still partition it.
-    expect(staff.status.active + staff.status.invited + staff.status.disabled).toBe(staff.total);
+    expect(
+      staff.status.active + staff.status.invited + staff.status.banned + staff.status.removed,
+    ).toBe(staff.total);
     expect(staff.population.player).toBe(0);
     expect(players.population.staff).toBe(0);
   });
 
   test("partition the roster — every row is counted exactly once", async () => {
     const facets = await countUserFacets();
-    const { active, invited, disabled } = facets.status;
+    const { active, invited, banned, removed } = facets.status;
 
-    expect(active + invited + disabled).toBe(facets.total);
+    expect(active + invited + banned + removed).toBe(facets.total);
     expect(facets.population.staff + facets.population.player).toBe(facets.total);
   });
 

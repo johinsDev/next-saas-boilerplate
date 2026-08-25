@@ -87,6 +87,22 @@
   --sidebar-ring: oklch(0.756 0.125 183.7);
 }
 
+@theme {
+  /*
+   * A sheen that travels, for skeletons. `animate-pulse` fades a whole block in
+   * and out, which reads as "this is broken and blinking"; a sweep in one
+   * direction reads as "something is on its way". Declared in the kit because
+   * the skeletons that use it are kit consumers, and because the keyframes
+   * should be generated once rather than per app.
+   */
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

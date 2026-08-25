@@ -46,14 +46,36 @@ export function ImpersonationBanner({
                 // way out should look like a decision being carried out.
                 { height: { duration: 0.32 }, opacity: { duration: 0.24 } }
           }
-          className="overflow-hidden border-b border-destructive/30 bg-destructive/10"
+          className="overflow-hidden border-b-2 border-destructive"
+          /*
+           * Hazard stripes, not a tinted bar.
+           *
+           * A flat coloured strip reads as branding within a minute — it is
+           * exactly what a "pro plan" banner looks like — and this must never
+           * be mistaken for theme. The stripes are 13% and 5%: enough to say
+           * "this is a state", not enough to fight the text on top.
+           */
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(135deg, rgb(163 48 42 / 0.13) 0 10px, rgb(163 48 42 / 0.05) 10px 20px)",
+            backgroundColor: "rgb(163 48 42 / 0.1)",
+          }}
         >
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:px-6">
-            <UserCog aria-hidden className="size-4 shrink-0 text-destructive" />
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 sm:px-6">
+            <span
+              aria-hidden
+              className="flex size-7 shrink-0 items-center justify-center rounded-full bg-destructive text-white"
+            >
+              <UserCog className="size-4" />
+            </span>
 
-            <p className="grow text-xs font-medium text-foreground">
-              You are signed in as <strong className="font-bold">{who}</strong>. Everything you do is
-              recorded against this account.
+            <p className="grow text-xs leading-tight">
+              <span className="block font-bold text-foreground">
+                You are signed in as <span className="text-destructive">{who}</span>
+              </span>
+              <span className="block text-[11px] text-muted-foreground">
+                Every action is recorded against this account
+              </span>
             </p>
 
             <button
@@ -64,9 +86,9 @@ export function ImpersonationBanner({
                 // collapse above is what covers the round trip.
                 startTransition(() => void onStop());
               }}
-              className="rounded-md bg-destructive px-3 py-1 text-xs font-bold text-white transition-opacity hover:opacity-90"
+              className="shrink-0 rounded-md bg-destructive px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90"
             >
-              Stop impersonating
+              Stop and go back to being me
             </button>
           </div>
         </motion.div>

@@ -9,6 +9,7 @@ export { HoverPrefetchLink } from "./hover-prefetch-link";
 export { ResponsiveModal } from "./responsive-modal";
 export { ToastProvider, useToast } from "./toast-provider";
 export { ThemeChoice } from "./theme-choice";
+export { Choicebox, type ChoiceboxOption } from "./choicebox";
 
 export * from "./components/ui/accordion";
 export * from "./components/ui/alert";

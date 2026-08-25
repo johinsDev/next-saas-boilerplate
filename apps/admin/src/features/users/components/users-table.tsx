@@ -1,4 +1,11 @@
+import { SearchX, UserRoundPlus } from "lucide-react";
 import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
   HoverPrefetchLink,
   Table,
   TableBody,
@@ -13,7 +20,8 @@ import type { UserFilters, UserSummary } from "@saas/services/users/schemas";
 
 import { getViewer } from "@/features/auth/auth-queries";
 import { readUserPage } from "../users-queries";
-import { RoleBadge, StatusBadge } from "./user-badges";
+import { ClearFilters } from "./clear-filters";
+import { RoleBadge, StatusMark, StatusNote, statusRail } from "./user-badges";
 import { UserRowActions } from "./user-row-actions";
 import { Pagination, SortHeader } from "./users-table-controls";
 
@@ -29,6 +37,11 @@ import { Pagination, SortHeader } from "./users-table-controls";
  * screen you look at immediately after changing somebody's role, and a stale
  * answer reads as "the change did not take".
  */
+/** Whether anything is narrowing the list — which decides which emptiness this is. */
+function isFiltered(filters: Partial<UserFilters>): boolean {
+  return Boolean(filters.q || filters.status || filters.role);
+}
+
 export async function UsersTable({
   filters,
   roles,
@@ -45,7 +58,7 @@ export async function UsersTable({
     getViewer(),
   ]);
 
-  if (users.length === 0) return <EmptyRoster />;
+  if (users.length === 0) return <EmptyRoster filtered={isFiltered(filters)} />;
 
   // The route the rows link to. Staff and customers have their own detail pages
   // so the sidebar keeps highlighting the section you are actually in.
@@ -137,7 +150,15 @@ function Row({
 
   return (
     <TableRow>
-      <TableCell>
+      {/*
+       * The rail rides the first CELL, not the row.
+       *
+       * The table is `border-collapse: collapse`, and in the collapsed border
+       * model a `<tr>` does not paint its own box-shadow — the value computes
+       * and simply never draws, which is a silent way to lose it. Cells paint
+       * theirs.
+       */}
+      <TableCell style={{ boxShadow: `inset 3px 0 0 0 ${statusRail(user.status)}` }}>
         {/*
          * `HoverPrefetchLink`, not a plain `<Link prefetch>`. Twenty-five rows
          * each resolving their own params on scroll is twenty-five server
@@ -174,11 +195,9 @@ function Row({
       )}
 
       <TableCell>
-        <span className="flex flex-col gap-1">
-          <StatusBadge status={user.status} />
-          {user.banReason && (
-            <span className="text-[11px] text-muted-foreground">{user.banReason}</span>
-          )}
+        <span className="flex flex-col gap-0.5">
+          <StatusMark status={user.status} />
+          <StatusNote user={user} />
         </span>
       </TableCell>
 
@@ -223,7 +242,10 @@ function Card({
   const label = user.name?.trim() || user.email || user.id;
 
   return (
-    <li className="flex items-start gap-3 border-b border-border p-4 last:border-b-0">
+    <li
+      className="flex items-start gap-3 border-b border-border p-4 last:border-b-0"
+      style={{ boxShadow: `inset 3px 0 0 0 ${statusRail(user.status)}` }}
+    >
       <HoverPrefetchLink
         href={`/${base}/${user.id}` as Route}
         className="flex min-w-0 grow items-start gap-3 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
@@ -241,17 +263,15 @@ function Card({
             <span className="truncate text-xs text-muted-foreground">{user.email ?? "—"}</span>
           </span>
 
-          <span className="flex flex-wrap items-center gap-1.5">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             {showRole && <RoleBadge role={user.role} />}
-            <StatusBadge status={user.status} />
+            <StatusMark status={user.status} />
             <span className="text-[11px] tabular-nums text-muted-foreground">
               {formatJoined(user.joinedAt)}
             </span>
           </span>
 
-          {user.banReason && (
-            <span className="text-[11px] text-muted-foreground">{user.banReason}</span>
-          )}
+          <StatusNote user={user} />
         </span>
       </HoverPrefetchLink>
 
@@ -288,21 +308,53 @@ function initials(label: string): string {
 }
 
 /**
- * Says which of two situations this is.
+ * Two emptinesses, and they are not the same screen.
  *
- * "No users" and "no users matching that" call for completely different next
- * moves, and one message for both leaves whoever is looking to work out which
- * they are in.
+ * "Nobody here" is a product state with one obvious next move. "Nobody
+ * matching" is a filter state, and the useful thing to say is how many there
+ * are when you stop filtering — otherwise the reader cannot tell whether the
+ * roster is empty or their query is too narrow.
  */
-function EmptyRoster() {
+function EmptyRoster({ filtered }: { filtered: boolean }) {
+  if (filtered) {
+    return (
+      <Empty className="rounded-xl border border-dashed border-border">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <SearchX aria-hidden />
+          </EmptyMedia>
+          <EmptyTitle>Nobody matches</EmptyTitle>
+          <EmptyDescription>
+            {/*
+             * `total` is the count *after* filtering, so it is zero here — the
+             * useful number is the unfiltered one, and the facets already have
+             * it above. Rather than fetch it again, say what to do.
+             */}
+            Nothing on this roster matches every filter at once. Narrowing by status and role
+            together is the usual cause.
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <ClearFilters />
+        </EmptyContent>
+      </Empty>
+    );
+  }
+
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-6 py-16 text-center">
-      <p className="text-sm font-semibold text-foreground">Nobody matches those filters</p>
-      <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
-        Clear a filter, or invite somebody. An account only appears here once it exists — invitations
-        create one straight away, so an invited person shows up before they have signed in.
-      </p>
-    </div>
+    <Empty className="rounded-xl border border-dashed border-border">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <UserRoundPlus aria-hidden />
+        </EmptyMedia>
+        <EmptyTitle>Nobody here yet</EmptyTitle>
+        <EmptyDescription>
+          Accounts are invited, never self-served. Invite somebody and they appear straight away,
+          marked <strong className="font-semibold text-[var(--warning)]">Invited</strong> until they
+          follow their link.
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }
 
@@ -318,13 +370,13 @@ export function UsersTableSkeleton({ showRole = true }: { showRole?: boolean }) 
       <ul className="flex flex-col md:hidden">
         {Array.from({ length: 5 }, (_, index) => (
           <li key={index} className="flex items-start gap-3 border-b border-border p-4 last:border-b-0">
-            <span className="size-9 shrink-0 animate-pulse rounded-full bg-muted" />
+            <span className="size-9 shrink-0 animate-shimmer rounded-full bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
             <span className="flex grow flex-col gap-2">
-              <span className="h-3.5 w-32 animate-pulse rounded bg-muted" />
-              <span className="h-3 w-44 animate-pulse rounded bg-muted" />
-              <span className="h-5 w-40 animate-pulse rounded-full bg-muted" />
+              <span className="h-3.5 w-32 animate-shimmer rounded bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
+              <span className="h-3 w-44 animate-shimmer rounded bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
+              <span className="h-5 w-40 animate-shimmer rounded-full bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
             </span>
-            <span className="size-8 shrink-0 animate-pulse rounded-md bg-muted" />
+            <span className="size-8 shrink-0 animate-shimmer rounded-md bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
           </li>
         ))}
       </ul>
@@ -350,26 +402,26 @@ export function UsersTableSkeleton({ showRole = true }: { showRole?: boolean }) 
             <TableRow key={index}>
               <TableCell>
                 <span className="flex items-center gap-3">
-                  <span className="size-8 shrink-0 animate-pulse rounded-full bg-muted" />
+                  <span className="size-8 shrink-0 animate-shimmer rounded-full bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
                   <span className="flex flex-col gap-1.5">
-                    <span className="h-3.5 w-32 animate-pulse rounded bg-muted" />
-                    <span className="h-3 w-44 animate-pulse rounded bg-muted" />
+                    <span className="h-3.5 w-32 animate-shimmer rounded bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
+                    <span className="h-3 w-44 animate-shimmer rounded bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
                   </span>
                 </span>
               </TableCell>
               {showRole && (
                 <TableCell>
-                  <span className="block h-5 w-16 animate-pulse rounded-full bg-muted" />
+                  <span className="block h-5 w-16 animate-shimmer rounded-full bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
                 </TableCell>
               )}
               <TableCell>
-                <span className="block h-5 w-16 animate-pulse rounded-full bg-muted" />
+                <span className="block h-5 w-16 animate-shimmer rounded-full bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
               </TableCell>
               <TableCell>
-                <span className="block h-3 w-24 animate-pulse rounded bg-muted" />
+                <span className="block h-3 w-24 animate-shimmer rounded bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
               </TableCell>
               <TableCell>
-                <span className="ml-auto block size-8 animate-pulse rounded-md bg-muted" />
+                <span className="ml-auto block size-8 animate-shimmer rounded-md bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
               </TableCell>
             </TableRow>
           ))}
@@ -378,8 +430,8 @@ export function UsersTableSkeleton({ showRole = true }: { showRole?: boolean }) 
       </div>
 
       <div className="flex items-center justify-between border-t border-border px-4 py-3">
-        <span className="h-3 w-40 animate-pulse rounded bg-muted" />
-        <span className="h-8 w-48 animate-pulse rounded bg-muted" />
+        <span className="h-3 w-40 animate-shimmer rounded bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
+        <span className="h-8 w-48 animate-shimmer rounded bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
       </div>
     </div>
   );

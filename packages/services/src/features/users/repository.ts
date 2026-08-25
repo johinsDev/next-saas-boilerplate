@@ -52,8 +52,16 @@ const NOT_BANNED = sql`coalesce(${user.banned}, 0) = 0`;
 /** True for a player as well as a serving member of staff: no row, no deletion. */
 const NOT_REMOVED = isNull(member.deletedAt);
 
+/**
+ * Four predicates that partition the roster, in the same precedence `statusOf`
+ * applies: a ban outranks a removed membership, and both outrank never having
+ * signed in. Every clause after the first therefore carries `NOT_BANNED` —
+ * without it a banned invitee would be counted twice and the facet totals would
+ * exceed the roster.
+ */
 const STATUS_PREDICATES = {
-  disabled: or(BANNED, isNotNull(member.deletedAt))!,
+  banned: BANNED,
+  removed: and(NOT_BANNED, isNotNull(member.deletedAt))!,
   invited: and(NOT_BANNED, NOT_REMOVED, eq(user.emailVerified, false))!,
   active: and(NOT_BANNED, NOT_REMOVED, eq(user.emailVerified, true))!,
 } as const;
@@ -234,7 +242,8 @@ export async function countUserFacets(population?: Population): Promise<UserFace
       player: tally(isNull(member.id)),
       active: tally(STATUS_PREDICATES.active),
       invited: tally(STATUS_PREDICATES.invited),
-      disabled: tally(STATUS_PREDICATES.disabled),
+      banned: tally(STATUS_PREDICATES.banned),
+      removed: tally(STATUS_PREDICATES.removed),
     })
     .from(user)
     .leftJoin(member, eq(member.userId, user.id))
@@ -246,7 +255,8 @@ export async function countUserFacets(population?: Population): Promise<UserFace
     status: {
       active: row?.active ?? 0,
       invited: row?.invited ?? 0,
-      disabled: row?.disabled ?? 0,
+      banned: row?.banned ?? 0,
+      removed: row?.removed ?? 0,
     },
   };
 }

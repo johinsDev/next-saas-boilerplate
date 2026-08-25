@@ -4,6 +4,7 @@ import type { Role } from "@saas/auth/roles";
 import type { Population } from "@saas/services/users/schemas";
 
 import { InviteModal, InviteTrigger } from "./invite-panel";
+import { AttentionStrip } from "./attention-strip";
 import { UsersFilters } from "./users-filters";
 import { UsersTable, UsersTableSkeleton } from "./users-table";
 import { readUserFacets } from "../users-queries";
@@ -76,6 +77,11 @@ export function RosterScreen({
        * cached, one entry per roster — and the table needs the query; sharing
        * a boundary would hold the controls hostage to the slower of the two.
        */}
+      {/*
+       * Above the filters, because it is the answer to why the screen was
+       * opened: something needs doing. It shares the facets boundary — one
+       * cached read serves both, and splitting them would mean two.
+       */}
       <Suspense fallback={<FiltersSkeleton hasRoles={Boolean(roles?.length)} />}>
         <Filters population={population} roles={roles} />
       </Suspense>
@@ -126,7 +132,14 @@ async function Filters({
 }) {
   await connection();
 
-  return <UsersFilters facets={await readUserFacets(population)} roles={roles} />;
+  const facets = await readUserFacets(population);
+
+  return (
+    <>
+      <AttentionStrip facets={facets} />
+      <UsersFilters facets={facets} roles={roles} />
+    </>
+  );
 }
 
 function FiltersSkeleton({ hasRoles }: { hasRoles: boolean }) {
@@ -134,9 +147,9 @@ function FiltersSkeleton({ hasRoles }: { hasRoles: boolean }) {
     <div className="flex flex-wrap items-end gap-3" aria-hidden>
       {["search:224", "status:160", ...(hasRoles ? ["role:160"] : [])].map((field) => (
         <div key={field} className="flex flex-col gap-1.5">
-          <span className="block h-2.5 w-14 animate-pulse rounded bg-muted" />
+          <span className="block h-2.5 w-14 animate-shimmer rounded bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
           <span
-            className="block h-9 animate-pulse rounded-md bg-muted"
+            className="block h-9 animate-shimmer rounded-md bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none"
             style={{ width: Number(field.split(":")[1]) }}
           />
         </div>

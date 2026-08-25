@@ -27,7 +27,7 @@ import { roleLabel } from "./user-badges";
  * change and the table would not, which looks exactly like a broken filter.
  *
  * Which controls appear is decided by the caller, because staff and customers are
- * now separate screens and a role filter on a list where everybody is a player
+ * now separate screens and a role filter on a list where everybody is a customer
  * is a control with one useful position.
  */
 
@@ -91,7 +91,21 @@ export function UsersFilters({
           open={openPanel === "status"}
           onOpenChange={(open) => setOpenPanel(open ? "status" : null)}
         >
-          <SelectTrigger>
+          <SelectTrigger
+            /*
+             * Two corrections to beUI's default, both visible side by side with
+             * the search box.
+             *
+             * `bg-card`: the default is `bg-background`, which is the page
+             * itself — so the select sank into the paper while the input beside
+             * it sat on card. They are the same kind of control and were
+             * reading as two.
+             *
+             * `h-11 md:h-9`: 36px is fine under a cursor and under the 44px
+             * floor for a finger. The desktop height is unchanged.
+             */
+            className="h-11 bg-card md:h-9"
+          >
             <SelectValue placeholder="Any status" />
           </SelectTrigger>
           <SelectContent>
@@ -126,7 +140,21 @@ export function UsersFilters({
             open={openPanel === "role"}
             onOpenChange={(open) => setOpenPanel(open ? "role" : null)}
           >
-            <SelectTrigger>
+          <SelectTrigger
+          /*
+           * Two corrections to beUI's default, both visible side by side with
+           * the search box.
+           *
+           * `bg-card`: the default is `bg-background`, which is the page
+           * itself — so the select sank into the paper while the input beside
+           * it sat on card. They are the same kind of control and were
+           * reading as two.
+           *
+           * `h-11 md:h-9`: 36px is fine under a cursor and under the 44px
+           * floor for a finger. The desktop height is unchanged.
+           */
+          className="h-11 bg-card md:h-9"
+        >
               <SelectValue placeholder="Any role" />
             </SelectTrigger>
             <SelectContent>
@@ -220,7 +248,7 @@ function SearchBox({ value, onChange }: { value: string; onChange: (next: string
            * unstyled. Suppressing the native one keeps the semantics and the
            * control we can position and theme.
            */
-          className="pl-9 [&::-webkit-search-cancel-button]:appearance-none"
+          className="h-11 pl-9 md:h-9 [&::-webkit-search-cancel-button]:appearance-none"
         />
         {text.length > 0 && (
           <button

@@ -66,14 +66,20 @@ export function roleOf(row: UserJoinRow): Role {
 /**
  * What state the account is in.
  *
- * The order is the rule. Somebody invited and then banned before they clicked
- * satisfies both conditions, and answering "invited" would file them among the
- * people we are waiting on — where the helpful thing to do is resend the
- * invitation to somebody we deliberately shut out.
+ * The order is the rule, and every line of it earns its place:
+ *
+ * A ban outranks a removed membership because it is the one carrying a reason
+ * and the one that has to be lifted first — restoring a role under a standing
+ * ban would look like it worked and change nothing.
+ *
+ * And both outrank `invited`. Somebody invited and then banned before they
+ * clicked satisfies two conditions at once, and answering "invited" would file
+ * them among the people we are waiting on — where the helpful thing to do is
+ * resend an invitation to somebody we deliberately shut out.
  */
 export function statusOf(row: UserJoinRow): UserStatus {
-  if (row.banned === true) return "disabled";
-  if (row.membership?.deletedAt != null) return "disabled";
+  if (row.banned === true) return "banned";
+  if (row.membership?.deletedAt != null) return "removed";
   if (!row.emailVerified) return "invited";
   return "active";
 }

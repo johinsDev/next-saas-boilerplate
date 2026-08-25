@@ -30,14 +30,33 @@ export const POPULATIONS: readonly Population[] = ["staff", "player"];
 /**
  * What state an account is in, as the roster shows it.
  *
+ * Four, not three. `banned` and `removed` were one `disabled` until the roster
+ * made the cost visible: both block access, and they are otherwise nothing
+ * alike. A ban carries a reason, was set by somebody, and is *lifted*; a
+ * removed membership carries no reason and is undone by assigning a role
+ * again. One badge for both meant the screen could not tell you which had
+ * happened, let alone what to do about it.
+ *
  * `invited` means the address has never been proven: the account was created by
  * an invitation and nobody has followed the link yet. It is deliberately not a
  * separate table — see the invite flow. Signing in verifies the address, so an
  * invitation is accepted by the same act that proves it.
+ *
+ * Order matters here: it is the order the filter offers them, and it runs from
+ * "nothing to do" to "most wrong".
  */
-export type UserStatus = "active" | "invited" | "disabled";
+export type UserStatus = "active" | "invited" | "banned" | "removed";
 
-export const USER_STATUSES: readonly UserStatus[] = ["active", "invited", "disabled"];
+export const USER_STATUSES: readonly UserStatus[] = ["active", "invited", "banned", "removed"];
+
+/**
+ * The statuses that are not `active`.
+ *
+ * The roster leads with a count of these — the reason anybody opens the screen
+ * is that something needs doing, and deriving it here keeps the strip and the
+ * filter from disagreeing.
+ */
+export const ATTENTION_STATUSES: readonly UserStatus[] = ["invited", "banned", "removed"];
 
 /**
  * The sortable columns.

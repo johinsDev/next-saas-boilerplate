@@ -8,7 +8,7 @@ import type { Population } from "@saas/services/users/schemas";
 
 import { getViewer } from "@/features/auth/auth-queries";
 import { readUser } from "../users-queries";
-import { RoleBadge, StatusBadge } from "./user-badges";
+import { RoleBadge, StatusMark } from "./user-badges";
 import { UserRowActions } from "./user-row-actions";
 
 /**
@@ -97,7 +97,7 @@ async function UserDetail({
             <p className="text-sm text-muted-foreground">{user.email ?? "No address on file"}</p>
             <div className="flex flex-wrap items-center gap-2">
               {population === "staff" && <RoleBadge role={user.role} />}
-              <StatusBadge status={user.status} />
+              <StatusMark status={user.status} />
             </div>
           </div>
         </div>
@@ -169,21 +169,21 @@ function UserDetailSkeleton() {
   return (
     <div className="flex flex-col gap-6" aria-hidden>
       <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-5">
-        <span className="size-12 shrink-0 animate-pulse rounded-full bg-muted" />
+        <span className="size-12 shrink-0 animate-shimmer rounded-full bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
         <span className="flex flex-col gap-2">
-          <span className="h-5 w-44 animate-pulse rounded bg-muted" />
-          <span className="h-3.5 w-56 animate-pulse rounded bg-muted" />
+          <span className="h-5 w-44 animate-shimmer rounded bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
+          <span className="h-3.5 w-56 animate-shimmer rounded bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
           <span className="flex gap-2">
-            <span className="h-5 w-16 animate-pulse rounded-full bg-muted" />
-            <span className="h-5 w-16 animate-pulse rounded-full bg-muted" />
+            <span className="h-5 w-16 animate-shimmer rounded-full bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
+            <span className="h-5 w-16 animate-shimmer rounded-full bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
           </span>
         </span>
       </div>
 
       <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5">
-        <span className="h-4 w-32 animate-pulse rounded bg-muted" />
-        <span className="h-10 w-full animate-pulse rounded-lg bg-muted" />
-        <span className="h-10 w-full animate-pulse rounded-lg bg-muted" />
+        <span className="h-4 w-32 animate-shimmer rounded bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
+        <span className="h-10 w-full animate-shimmer rounded-lg bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
+        <span className="h-10 w-full animate-shimmer rounded-lg bg-muted bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--muted)_0%,rgb(86_48_12/0.14)_50%,var(--muted)_100%)] motion-reduce:animate-none" />
       </div>
     </div>
   );

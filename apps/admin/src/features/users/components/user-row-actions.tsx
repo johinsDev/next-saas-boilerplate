@@ -58,6 +58,15 @@ export function UserRowActions({
    * is a menu that describes a different person from the one on the row.
    */
   const invited = user.status === "invited";
+  /*
+   * These were one `disabled` and they are not one action. A ban is *lifted* —
+   * the membership underneath is intact and comes back with it. A removed
+   * membership has nothing to lift: it is restored by assigning a role, which
+   * is already the first thing in this menu. Offering "re-enable" for both was
+   * a button that did nothing for half the rows it appeared on.
+   */
+  const banned = user.status === "banned";
+  const removed = user.status === "removed";
 
   const run = (action: () => Promise<ActionResult>, done: string) => {
     startTransition(async () => {
@@ -101,7 +110,43 @@ export function UserRowActions({
 
         <Menu.Portal>
           <Menu.Positioner side="bottom" align="end" sideOffset={6}>
-            <Menu.Popup className="min-w-52 rounded-lg border border-border bg-card p-1 shadow-lg outline-none">
+            {/*
+             * Grows out of the trigger, rather than appearing.
+             *
+             * Base UI drives this with plain CSS: the popup carries
+             * `data-starting-style` and `data-ending-style` while it enters and
+             * leaves, and it holds the element mounted until the transition
+             * finishes — which is what makes a *close* animation possible at
+             * all, since React would otherwise have unmounted it first.
+             *
+             * `--transform-origin` comes from the positioner and already knows
+             * which side and alignment it resolved to, so the scale grows from
+             * the corner nearest the button instead of from the middle. That is
+             * the difference between a menu that comes from the control you
+             * pressed and one that merely appears near it.
+             */}
+            <Menu.Popup
+              className={cn(
+                "min-w-52 rounded-lg border border-border bg-card p-1 shadow-lg outline-none",
+                /*
+                 * Two things here are easy to get wrong, and both were.
+                 *
+                 * The transition names **`scale`, not `transform`**: Tailwind
+                 * v4 compiles `scale-*` to the standalone `scale` property, so
+                 * a transition on `transform` animates something that never
+                 * changes. Verified with transition events — only `opacity`
+                 * ever fired until this was corrected.
+                 *
+                 * And `scale-100` names the open end explicitly, so both ends
+                 * of the transition have a value to interpolate between.
+                 */
+                "scale-100 [transform-origin:var(--transform-origin)]",
+                "transition-[opacity,scale] duration-150 ease-out",
+                "data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
+                "data-[ending-style]:scale-95 data-[ending-style]:opacity-0",
+                "motion-reduce:transition-none",
+              )}
+            >
               {roles.length > 0 && (
                 <>
                   <Group label="Role">
@@ -128,12 +173,20 @@ export function UserRowActions({
               )}
 
               <Group label="Access">
-                {user.status === "disabled" ? (
+                {banned ? (
                   <Item
                     icon={<ShieldCheck aria-hidden className="size-3.5" />}
-                    onClick={() => run(() => unbanUserAction(user.id), "Account re-enabled")}
+                    onClick={() => run(() => unbanUserAction(user.id), "Ban lifted")}
                   >
-                    Re-enable account
+                    Lift the ban
+                  </Item>
+                ) : removed ? (
+                  <Item
+                    icon={<ShieldCheck aria-hidden className="size-3.5" />}
+                    disabled
+                    onClick={() => undefined}
+                  >
+                    Assign a role above to restore
                   </Item>
                 ) : (
                   <Item

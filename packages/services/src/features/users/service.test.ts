@@ -86,16 +86,33 @@ describe("statusOf", () => {
     expect(statusOf(row({ emailVerified: false }))).toBe("invited");
   });
 
-  test("a banned account is disabled", () => {
-    expect(statusOf(row({ banned: true }))).toBe("disabled");
+  test("a banned account says banned, not disabled", () => {
+    /*
+     * These were one status until the roster made the cost visible: "Disabled"
+     * was worn by two situations that call for different next moves, and they
+     * looked identical on the row. A ban carries a reason and is lifted; a
+     * removed membership carries none and is restored by re-assigning a role.
+     */
+    expect(statusOf(row({ banned: true }))).toBe("banned");
   });
 
-  test("a removed member of staff is disabled", () => {
+  test("a removed member of staff says removed", () => {
     const removed = row({
       membership: { role: "staff", deletedAt: new Date("2026-06-01T00:00:00Z") },
     });
 
-    expect(statusOf(removed)).toBe("disabled");
+    expect(statusOf(removed)).toBe("removed");
+  });
+
+  test("being banned beats having had a membership removed", () => {
+    // Both are true of somebody removed and then banned. The ban is the one
+    // with a reason attached, and the one that has to be lifted first.
+    const both = row({
+      banned: true,
+      membership: { role: "staff", deletedAt: new Date("2026-06-01T00:00:00Z") },
+    });
+
+    expect(statusOf(both)).toBe("banned");
   });
 
   test("being banned beats never having signed in", () => {
@@ -104,7 +121,7 @@ describe("statusOf", () => {
      * Reporting "invited" would put them in the list of people we are waiting
      * on, and somebody would helpfully resend the invitation.
      */
-    expect(statusOf(row({ emailVerified: false, banned: true }))).toBe("disabled");
+    expect(statusOf(row({ emailVerified: false, banned: true }))).toBe("banned");
   });
 });
 
@@ -112,7 +129,7 @@ describe("toSummary", () => {
   test("carries the ban reason so the table can say why", () => {
     const summary = toSummary(row({ banned: true, banReason: "Left the company" }));
 
-    expect(summary.status).toBe("disabled");
+    expect(summary.status).toBe("banned");
     expect(summary.banReason).toBe("Left the company");
   });
 
@@ -212,10 +229,10 @@ describe("normaliseFilters", () => {
   });
 
   test("keeps the facets it does recognise", () => {
-    const filters = normaliseFilters({ population: "staff", status: "disabled", role: "manager" });
+    const filters = normaliseFilters({ population: "staff", status: "banned", role: "manager" });
 
     expect(filters.population).toBe("staff");
-    expect(filters.status).toBe("disabled");
+    expect(filters.status).toBe("banned");
     expect(filters.role).toBe("manager");
   });
 });

@@ -172,7 +172,8 @@ export function SortSelect() {
           setFilters({ sort: order.sort, direction: order.direction, page: 1 });
         }}
       >
-        <SelectTrigger>
+        {/* Same two corrections as the filter selects — see `users-filters`. */}
+        <SelectTrigger className="h-11 bg-card md:h-9">
           <SelectValue placeholder="Custom order" />
         </SelectTrigger>
         <SelectContent>
