@@ -106,5 +106,14 @@ not the policy:
   agree. `useIsMobile` in `src/hooks/` is the older `useEffect` version and renders `false`
   once before correcting itself; prefer this one for anything that switches layout.
 
-`MotionSelect` is beUI's select, prefixed because every part of it would otherwise collide
-with the kit's own `Select` — which stays the one to reach for in a dense form.
+`MotionSelect` and `MotionPopover` are beUI's, prefixed because every part of them would
+otherwise collide with the kit's own `Select` and `Popover` — which stay the ones to reach
+for in a dense form or for a plain anchored panel. The beUI versions melt out of their
+trigger, which is worth the swap where the gesture is part of the point: an account menu, a
+quick-actions panel.
+
+`ThemeChoice` is three positions — system, light, dark — where beUI's `ThemeToggle` is two.
+The toggle is the right control for a rail and the wrong one for a menu: it cannot express
+"follow the system", so somebody who has never touched it is shown a state they did not
+choose and cannot get back to. It keeps the View Transition; the circular reveal belongs to
+`ThemeToggle`'s own two-state toggle and stays there.

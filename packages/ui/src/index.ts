@@ -8,6 +8,7 @@ export { useMediaQuery, DESKTOP_QUERY } from "./use-media-query";
 export { HoverPrefetchLink } from "./hover-prefetch-link";
 export { ResponsiveModal } from "./responsive-modal";
 export { ToastProvider, useToast } from "./toast-provider";
+export { ThemeChoice } from "./theme-choice";
 
 export * from "./components/ui/accordion";
 export * from "./components/ui/alert";
@@ -141,6 +142,19 @@ export { Input as MotionInput, type InputProps as MotionInputProps } from "./com
 export { NumberTicker, type NumberTickerProps } from "./components/motion/number-ticker";
 export { ThemeToggle } from "./components/motion/theme-toggle";
 export { BottomSheet, type BottomSheetProps } from "./components/motion/bottom-sheet";
+
+/*
+ * beUI's popover, prefixed for the same reason as the select: the kit has its
+ * own `Popover` over Base UI, which stays the one for a plain anchored panel.
+ * This one melts out of its trigger, which is worth it where the gesture is
+ * part of the point — an account menu, a quick actions panel.
+ */
+export {
+  Popover as MotionPopover,
+  PopoverContent as MotionPopoverContent,
+  PopoverTrigger as MotionPopoverTrigger,
+  type PopoverProps as MotionPopoverProps,
+} from "./components/motion/popover";
 
 /*
  * beUI's select, prefixed like `MotionInput` — every part of it would otherwise
