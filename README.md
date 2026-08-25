@@ -132,10 +132,14 @@ bun run --cwd packages/jobs deploy
 ```
 
 **Email goes through the queue in production and stays local in development.** The apps
-select the `queue` provider when `TRIGGER_SECRET_KEY` is present and `folder` when it is
-not, so a fresh clone can sign in with `bun run dev` and nothing else running — needing a
-queue to read your own magic link is how a boilerplate gets abandoned in the first ten
-minutes.
+defer when `EMAIL_QUEUE` is set and deliver locally when it is not, so a fresh clone can
+sign in with `bun run dev` and nothing else running — needing a queue to read your own
+magic link is how a boilerplate gets abandoned in the first ten minutes.
+
+It is `EMAIL_QUEUE` rather than the presence of `TRIGGER_SECRET_KEY` because those are two
+different facts. The worker needs its credentials wherever it runs, laptops included, and
+having them there must not silently divert an app's mail to a provider nobody wanted
+locally. `EMAIL_QUEUE=1 bun run dev` exercises the real queue when you want it.
 
 **A queue is not a provider.** A provider answers *where* the mail goes — Resend, a file,
 a table. The queue answers *when*. They are separate fields, because folding them into one
