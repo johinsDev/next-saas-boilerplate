@@ -125,5 +125,14 @@ export {
   AnimatedSidebarTrigger,
   useAnimatedSidebar,
 } from "./components/motion/animated-sidebar";
+/*
+ * Exported as `MotionInput`, not `Input`, and both earn their place. The kit's
+ * `Input` is a plain uncontrolled field for dense admin forms, where a shake on
+ * every input would be noise. beUI's is controlled — its `onChange` hands you a
+ * string rather than an event — so it needs a `Controller` when it meets React
+ * Hook Form, and it repays that with a floating label, an error shake and a
+ * success state.
+ */
+export { Input as MotionInput, type InputProps as MotionInputProps } from "./components/motion/input";
 export { NumberTicker, type NumberTickerProps } from "./components/motion/number-ticker";
 export { ThemeToggle } from "./components/motion/theme-toggle";
