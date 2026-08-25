@@ -5,11 +5,14 @@ import { useRouter } from "next/navigation";
 import { ChevronRight, LayoutDashboard, LogOut } from "lucide-react";
 import { signOut } from "@saas/auth/client";
 import {
+  BottomSheet,
   cn,
+  DESKTOP_QUERY,
   MotionPopover,
   MotionPopoverContent,
   MotionPopoverTrigger,
   ThemeChoice,
+  useMediaQuery,
 } from "@saas/ui";
 
 /**
@@ -24,6 +27,12 @@ import {
  * The contents are **only what exists**. A menu of Docs, Changelog and Help
  * links pointing at pages nobody has written is worse than a short one: it
  * teaches people the menu lies. Those entries arrive when their pages do.
+ *
+ * **A popover on a desktop and a sheet on a phone.** The popover anchors to its
+ * trigger, and the trigger sits at the bottom of a sidebar that on a phone is
+ * itself an overlay — so the panel was being positioned against something
+ * halfway off the screen and went with it. A sheet has nothing to anchor to,
+ * which is the whole point.
  */
 export function ViewerMenu({
   email,
@@ -42,6 +51,96 @@ export function ViewerMenu({
 
   const label = name?.trim() || email;
 
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
+
+  const trigger = (
+    <button
+      type="button"
+      className={cn(
+        "flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2 py-1.5 text-left transition-colors",
+        "hover:border-border hover:bg-card focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        open && "border-border bg-card",
+      )}
+    >
+      <Avatar label={label} impersonating={impersonating} />
+
+      <span className="flex min-w-0 grow flex-col leading-tight">
+        <span className="truncate text-xs font-semibold text-foreground">{label}</span>
+        <span className="truncate text-[11px] text-muted-foreground">{email}</span>
+      </span>
+
+      <ChevronRight
+        aria-hidden
+        className={cn(
+          "size-3.5 shrink-0 text-muted-foreground transition-transform duration-200",
+          open && "rotate-90",
+          "motion-reduce:transition-none",
+        )}
+      />
+    </button>
+  );
+
+  const body = (
+    <>
+      <div className="border-t border-border">
+        <Row label="Role">
+          <span className="rounded-full bg-secondary px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-secondary-foreground">
+            {role}
+          </span>
+        </Row>
+
+        <Row label="Theme">
+          <ThemeChoice />
+        </Row>
+      </div>
+
+      <div className="border-t border-border p-1">
+        <Action
+          icon={<LayoutDashboard aria-hidden className="size-3.5" />}
+          onClick={() => {
+            setOpen(false);
+            router.push("/dashboard");
+          }}
+        >
+          Dashboard
+        </Action>
+
+        <Action
+          icon={<LogOut aria-hidden className="size-3.5" />}
+          disabled={leaving}
+          onClick={() => {
+            setLeaving(true);
+            void signOut().then(() => {
+              /*
+               * `refresh()` before `replace()`: the session lives in a cookie
+               * the server read while rendering, so without dropping that cache
+               * the next page would still be built from the signed-in one.
+               */
+              router.refresh();
+              router.replace("/sign-in");
+            });
+          }}
+        >
+          {leaving ? "Signing out…" : "Sign out"}
+        </Action>
+      </div>
+    </>
+  );
+
+  if (!isDesktop) {
+    return (
+      <>
+        <span onClick={() => setOpen(true)}>{trigger}</span>
+
+        {open && (
+          <BottomSheet open={open} onOpenChange={setOpen} title={label} description={email} snapPoints={["auto"]}>
+            {body}
+          </BottomSheet>
+        )}
+      </>
+    );
+  }
+
   return (
     <MotionPopover
       open={open}
@@ -50,41 +149,16 @@ export function ViewerMenu({
       align="start"
       // A detached panel, not a blob with a neck.
       //
-      // beUI's default melts the panel out of its trigger — `gooStrength`
-      // feeds a Gaussian blur, and the sharpening pass behind it fuses two
-      // shapes that are close into one, which is what draws the tail. Zero
-      // means no blur, so nothing fuses and the panel simply opens. The
-      // morph itself is untouched.
+      // beUI's default melts the panel out of its trigger — `gooStrength` feeds
+      // a Gaussian blur, and the sharpening pass behind it fuses two shapes
+      // that are close into one, which is what draws the tail. Zero means no
+      // blur, so nothing fuses and the panel simply opens. The morph itself is
+      // untouched.
       gooStrength={0}
       // Enough gap that the panel reads as its own surface.
       sideOffset={12}
     >
-      <MotionPopoverTrigger>
-        <button
-          type="button"
-          className={cn(
-            "flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2 py-1.5 text-left transition-colors",
-            "hover:border-border hover:bg-card focus-visible:ring-[3px] focus-visible:ring-ring/50",
-            open && "border-border bg-card",
-          )}
-        >
-          <Avatar label={label} impersonating={impersonating} />
-
-          <span className="flex min-w-0 grow flex-col leading-tight">
-            <span className="truncate text-xs font-semibold text-foreground">{label}</span>
-            <span className="truncate text-[11px] text-muted-foreground">{email}</span>
-          </span>
-
-          <ChevronRight
-            aria-hidden
-            className={cn(
-              "size-3.5 shrink-0 text-muted-foreground transition-transform duration-200",
-              open && "rotate-90",
-              "motion-reduce:transition-none",
-            )}
-          />
-        </button>
-      </MotionPopoverTrigger>
+      <MotionPopoverTrigger>{trigger}</MotionPopoverTrigger>
 
       <MotionPopoverContent className="w-64 p-0">
         <header className="flex items-start gap-2.5 px-3 py-3">
@@ -95,49 +169,7 @@ export function ViewerMenu({
           </span>
         </header>
 
-        <div className="border-t border-border">
-          <Row label="Role">
-            <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-secondary-foreground">
-              {role}
-            </span>
-          </Row>
-
-          <Row label="Theme">
-            <ThemeChoice />
-          </Row>
-        </div>
-
-        <div className="border-t border-border p-1">
-          <Action
-            icon={<LayoutDashboard aria-hidden className="size-3.5" />}
-            onClick={() => {
-              setOpen(false);
-              router.push("/dashboard");
-            }}
-          >
-            Dashboard
-          </Action>
-
-          <Action
-            icon={<LogOut aria-hidden className="size-3.5" />}
-            disabled={leaving}
-            onClick={() => {
-              setLeaving(true);
-              void signOut().then(() => {
-                /*
-                 * `refresh()` before `replace()`: the session lives in a cookie
-                 * the server read while rendering, so without dropping that
-                 * cache the next page would still be built from the signed-in
-                 * one.
-                 */
-                router.refresh();
-                router.replace("/sign-in");
-              });
-            }}
-          >
-            {leaving ? "Signing out…" : "Sign out"}
-          </Action>
-        </div>
+        {body}
       </MotionPopoverContent>
     </MotionPopover>
   );

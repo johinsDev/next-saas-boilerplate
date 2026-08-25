@@ -54,6 +54,28 @@ export async function UsersTable({
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
+      {/*
+       * Two renderings of the same rows, and the breakpoint is not cosmetic.
+       * Five columns in 390px means the last two fall off the edge — which is
+       * exactly what a status column doing is: invisible. Cards below `md` put
+       * every field on its own line and keep the row menu reachable; the sort
+       * moves into a select, because a card has no header to click.
+       */}
+      <ul className="flex flex-col md:hidden">
+        {users.map((user) => (
+          <Card
+            key={user.id}
+            user={user}
+            base={base}
+            showRole={showRole}
+            roles={menuRoles}
+            viewerId={viewer?.userId ?? ""}
+            viewerIsOwner={viewer?.role === "owner"}
+          />
+        ))}
+      </ul>
+
+      <div className="hidden md:block">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
@@ -89,6 +111,7 @@ export async function UsersTable({
           ))}
         </TableBody>
       </Table>
+      </div>
 
       <Pagination page={page} pageCount={pageCount} total={total} shown={users.length} />
     </div>
@@ -160,18 +183,7 @@ function Row({
       </TableCell>
 
       <TableCell className="text-xs tabular-nums text-muted-foreground">
-        {/*
-         * A fixed locale and UTC. `toLocaleDateString()` with neither reads the
-         * server's, so the same row renders one day earlier or later depending
-         * on where it was rendered — and it mismatches between the server and
-         * the client, which React reports as a hydration error.
-         */}
-        {user.joinedAt.toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          timeZone: "UTC",
-        })}
+        {formatJoined(user.joinedAt)}
       </TableCell>
 
       <TableCell>
@@ -184,6 +196,90 @@ function Row({
       </TableCell>
     </TableRow>
   );
+}
+
+/**
+ * One person, on a narrow screen.
+ *
+ * The same data as a row, stacked. The name block is the link — a whole-card
+ * link would swallow the menu button inside it, and a card with one tap target
+ * that does two things is a card that does the wrong one.
+ */
+function Card({
+  user,
+  base,
+  showRole,
+  roles,
+  viewerId,
+  viewerIsOwner,
+}: {
+  user: UserSummary;
+  base: string;
+  showRole: boolean;
+  roles?: readonly Role[];
+  viewerId: string;
+  viewerIsOwner: boolean;
+}) {
+  const label = user.name?.trim() || user.email || user.id;
+
+  return (
+    <li className="flex items-start gap-3 border-b border-border p-4 last:border-b-0">
+      <HoverPrefetchLink
+        href={`/${base}/${user.id}` as Route}
+        className="flex min-w-0 grow items-start gap-3 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      >
+        <span
+          aria-hidden
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-[11px] font-extrabold uppercase text-secondary-foreground"
+        >
+          {initials(label)}
+        </span>
+
+        <span className="flex min-w-0 grow flex-col gap-1.5">
+          <span className="flex flex-col leading-tight">
+            <span className="truncate text-sm font-semibold text-foreground">{label}</span>
+            <span className="truncate text-xs text-muted-foreground">{user.email ?? "—"}</span>
+          </span>
+
+          <span className="flex flex-wrap items-center gap-1.5">
+            {showRole && <RoleBadge role={user.role} />}
+            <StatusBadge status={user.status} />
+            <span className="text-[11px] tabular-nums text-muted-foreground">
+              {formatJoined(user.joinedAt)}
+            </span>
+          </span>
+
+          {user.banReason && (
+            <span className="text-[11px] text-muted-foreground">{user.banReason}</span>
+          )}
+        </span>
+      </HoverPrefetchLink>
+
+      <UserRowActions
+        user={user}
+        viewerId={viewerId}
+        viewerIsOwner={viewerIsOwner}
+        roles={roles}
+      />
+    </li>
+  );
+}
+
+/**
+ * A fixed locale and UTC.
+ *
+ * `toLocaleDateString()` with neither reads the server's, so the same row
+ * renders a day earlier or later depending on where it was rendered — and it
+ * mismatches between server and client, which React reports as a hydration
+ * error.
+ */
+function formatJoined(date: Date): string {
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 function initials(label: string): string {
@@ -219,6 +315,21 @@ function EmptyRoster() {
 export function UsersTableSkeleton({ showRole = true }: { showRole?: boolean }) {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card" aria-hidden>
+      <ul className="flex flex-col md:hidden">
+        {Array.from({ length: 5 }, (_, index) => (
+          <li key={index} className="flex items-start gap-3 border-b border-border p-4 last:border-b-0">
+            <span className="size-9 shrink-0 animate-pulse rounded-full bg-muted" />
+            <span className="flex grow flex-col gap-2">
+              <span className="h-3.5 w-32 animate-pulse rounded bg-muted" />
+              <span className="h-3 w-44 animate-pulse rounded bg-muted" />
+              <span className="h-5 w-40 animate-pulse rounded-full bg-muted" />
+            </span>
+            <span className="size-8 shrink-0 animate-pulse rounded-md bg-muted" />
+          </li>
+        ))}
+      </ul>
+
+      <div className="hidden md:block">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
@@ -264,6 +375,7 @@ export function UsersTableSkeleton({ showRole = true }: { showRole?: boolean }) 
           ))}
         </TableBody>
       </Table>
+      </div>
 
       <div className="flex items-center justify-between border-t border-border px-4 py-3">
         <span className="h-3 w-40 animate-pulse rounded bg-muted" />

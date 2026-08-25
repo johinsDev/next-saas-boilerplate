@@ -8,14 +8,15 @@ import { USER_STATUSES, type UserFacets, type UserStatus } from "@saas/services/
 import {
   cn,
   Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  MotionSelect as Select,
+  MotionSelectContent as SelectContent,
+  MotionSelectItem as SelectItem,
+  MotionSelectTrigger as SelectTrigger,
+  MotionSelectValue as SelectValue,
 } from "@saas/ui";
 
 import { userSearchParams } from "../users-search-params";
+import { SortSelect } from "./users-table-controls";
 import { roleLabel } from "./user-badges";
 
 /**
@@ -26,7 +27,7 @@ import { roleLabel } from "./user-badges";
  * change and the table would not, which looks exactly like a broken filter.
  *
  * Which controls appear is decided by the caller, because staff and customers are
- * now separate screens and a role filter on a list where everybody is a customer
+ * now separate screens and a role filter on a list where everybody is a player
  * is a control with one useful position.
  */
 
@@ -139,6 +140,16 @@ export function UsersFilters({
           </Select>
         </Field>
       )}
+
+      {/*
+       * Only below `md`, where the column headers it stands in for do not
+       * exist. Showing both would be two controls for one piece of state, and
+       * they would disagree the moment somebody used the one that offers
+       * combinations the other does not.
+       */}
+      <div className="md:hidden">
+        <SortSelect />
+      </div>
 
       {(filters.q || filters.status || filters.role) && (
         <button

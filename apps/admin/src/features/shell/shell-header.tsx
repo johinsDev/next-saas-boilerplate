@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { PanelLeft } from "lucide-react";
 import { AnimatedSidebarTrigger } from "@saas/ui";
 
 import { titleFor } from "./nav";
@@ -22,7 +23,14 @@ export function ShellHeader() {
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 sm:px-6">
-      <AnimatedSidebarTrigger />
+      {/*
+       * The icon is ours to pass. beUI's trigger renders a bare `<button>` and
+       * spreads whatever children it is given — with none, it is a 40px
+       * invisible target that toggles the sidebar when you happen to hit it.
+       */}
+      <AnimatedSidebarTrigger className="text-muted-foreground transition-colors hover:text-foreground">
+        <PanelLeft aria-hidden className="size-4" />
+      </AnimatedSidebarTrigger>
 
       {/*
        * A divider only when there is something to divide. On an unlisted route
@@ -51,7 +59,7 @@ export function ShellHeaderSkeleton() {
       className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 sm:px-6"
       aria-hidden
     >
-      <span className="size-8 rounded-md bg-muted" />
+      <span className="size-10 rounded-xl bg-muted" />
     </header>
   );
 }

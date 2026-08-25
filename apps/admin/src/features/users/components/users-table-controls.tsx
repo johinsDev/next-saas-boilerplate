@@ -4,7 +4,15 @@ import { useQueryStates } from "nuqs";
 import { useTransition } from "react";
 import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
 import type { UserSort } from "@saas/services/users/schemas";
-import { Button, cn } from "@saas/ui";
+import {
+  Button,
+  cn,
+  MotionSelect as Select,
+  MotionSelectContent as SelectContent,
+  MotionSelectItem as SelectItem,
+  MotionSelectTrigger as SelectTrigger,
+  MotionSelectValue as SelectValue,
+} from "@saas/ui";
 
 import { userSearchParams } from "../users-search-params";
 
@@ -109,6 +117,72 @@ export function Pagination({
           Next
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Sorting, as one control.
+ *
+ * Column headers are the right affordance on a wide screen and impossible on a
+ * narrow one: below `md` the rows are cards, and a card has no header row to
+ * click. Combining column and direction into one list also says what the order
+ * *means* — "Newest first" rather than a caret whose direction you have to
+ * decode.
+ *
+ * The pairs are written out rather than generated from `USER_SORTS` because
+ * only some of them are worth offering: nobody sorts a roster by role
+ * descending on a phone.
+ */
+const ORDERS: readonly { value: string; label: string; sort: UserSort; direction: "asc" | "desc" }[] =
+  [
+    { value: "joined:desc", label: "Newest first", sort: "joined", direction: "desc" },
+    { value: "joined:asc", label: "Oldest first", sort: "joined", direction: "asc" },
+    { value: "name:asc", label: "Name A–Z", sort: "name", direction: "asc" },
+    { value: "name:desc", label: "Name Z–A", sort: "name", direction: "desc" },
+    { value: "email:asc", label: "Email A–Z", sort: "email", direction: "asc" },
+    { value: "role:desc", label: "Most senior first", sort: "role", direction: "desc" },
+  ];
+
+export function SortSelect() {
+  const [pending, startTransition] = useTransition();
+  const [{ sort, direction }, setFilters] = useQueryStates(userSearchParams, {
+    shallow: false,
+    startTransition,
+  });
+
+  const current = `${sort}:${direction}`;
+  // A combination the list does not offer — reachable from the desktop headers,
+  // or by hand in the URL. Showing the placeholder beats lighting the wrong row.
+  const known = ORDERS.some((order) => order.value === current);
+
+  return (
+    <div className={cn("flex min-w-44 flex-col gap-1.5", pending && "opacity-60")}>
+      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+        Sort
+      </span>
+
+      <Select
+        value={known ? current : ""}
+        onValueChange={(value) => {
+          const order = ORDERS.find((candidate) => candidate.value === value);
+          if (!order) return;
+          // Back to the first page: row 26 of page 2 is not row 26 of page 2
+          // once the order changes.
+          setFilters({ sort: order.sort, direction: order.direction, page: 1 });
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Custom order" />
+        </SelectTrigger>
+        <SelectContent>
+          {ORDERS.map((order) => (
+            <SelectItem key={order.value} value={order.value}>
+              {order.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

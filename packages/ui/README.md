@@ -138,3 +138,16 @@ toolbar and it looks like a mistake on a menu anchored to a sidebar.
 
 `gooStrength={0}` gives a detached panel and keeps the morph. Reach for it
 whenever the trigger is part of a surface rather than sitting on its own.
+
+## `AnimatedSidebarTrigger` has no icon of its own
+
+It renders a bare `<button>` and spreads whatever children it is given. Passing none is not
+a compile error and not a runtime one — it is a 40px invisible target that toggles the
+sidebar when somebody happens to hit it, which is exactly how it went unnoticed for three
+rounds of work in INTRIGO.
+
+```tsx
+<AnimatedSidebarTrigger>
+  <PanelLeft aria-hidden className="size-4" />
+</AnimatedSidebarTrigger>
+```
