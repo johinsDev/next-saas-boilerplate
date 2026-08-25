@@ -96,6 +96,45 @@ export type ProviderConfig =
   | OutboxProviderConfig;
 
 /**
+ * A handle on queued work — the shape every queue returns and the only part of
+ * one this package needs to know about.
+ */
+export interface QueuedDispatch {
+  id: string;
+}
+
+/** What travels to the worker: which mailer to use, and what to send. */
+export interface QueuedEmailJob {
+  /**
+   * The mailer that should deliver this. Resolved on the worker, not here —
+   * the whole point is that this process does not hold the provider's
+   * credentials.
+   */
+  mailer: string;
+  message: EmailMessageData;
+}
+
+/**
+ * Whether to send now or hand the message to a background worker.
+ *
+ * **Deliberately not a provider.** A provider answers *where* the mail goes —
+ * Resend, a file, a table. This answers *when*. Folding the two into one enum
+ * makes the destination unexpressible the moment you defer: you can no longer
+ * say "queue it, and deliver it through Resend", which is the only thing you
+ * ever want to say.
+ */
+export interface EmailQueueConfig {
+  /** Which mailer the worker should deliver through. */
+  mailer: string;
+  /**
+   * Hands the job to the queue. Injected by the app's bootstrap, the same way
+   * the outbox transport takes its `db`, so this package never depends on a
+   * particular queue vendor.
+   */
+  dispatch: (job: QueuedEmailJob) => Promise<QueuedDispatch>;
+}
+
+/**
  * Structural type of the slice of `@saas/log`'s `Logger` we use.
  * Kept narrow so swapping loggers (or fakes) doesn't drag the whole
  * package surface.
@@ -123,6 +162,11 @@ export interface EmailManagerConfig<
 > {
   default: keyof T & string;
   mailers: T;
+  /**
+   * Present → every send is handed to the worker instead of delivered here.
+   * Orthogonal to `mailers`: that picks the destination, this picks the moment.
+   */
+  queue?: EmailQueueConfig;
   /** Defaults to `info`. `silent` suppresses internal `[email]` lines. */
   logLevel?: EmailLogLevel;
 }
