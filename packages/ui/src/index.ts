@@ -97,3 +97,33 @@ export * from "./components/ui/number-stepper";
 export * from "./components/ui/tag-input";
 export * from "./components/ui/time-input";
 export * from "./components/ui/url-input";
+
+/*
+ * beUI — `bunx --bun shadcn add @beui/<name>` against the registry declared in
+ * `components.json`. Self-contained over `motion/react`, so they sit beside our
+ * Base UI primitives rather than dragging in a second set. See README.md for
+ * the edits that must be reapplied after an install.
+ */
+export {
+  AnimatedSidebar,
+  AnimatedSidebarClose,
+  AnimatedSidebarContent,
+  AnimatedSidebarFooter,
+  AnimatedSidebarGroup,
+  AnimatedSidebarGroupContent,
+  AnimatedSidebarGroupLabel,
+  AnimatedSidebarHeader,
+  AnimatedSidebarInset,
+  AnimatedSidebarMenu,
+  AnimatedSidebarMenuButton,
+  AnimatedSidebarMenuItem,
+  AnimatedSidebarMenuSub,
+  AnimatedSidebarMenuSubButton,
+  AnimatedSidebarMenuSubItem,
+  AnimatedSidebarProvider,
+  AnimatedSidebarRail,
+  AnimatedSidebarTrigger,
+  useAnimatedSidebar,
+} from "./components/motion/animated-sidebar";
+export { NumberTicker, type NumberTickerProps } from "./components/motion/number-ticker";
+export { ThemeToggle } from "./components/motion/theme-toggle";

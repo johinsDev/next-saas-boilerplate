@@ -7,8 +7,8 @@
    @source directives ensure their classes get generated. Paths are
    relative to this CSS file (packages/ui/styles/globals.css). */
 @source "../src/**/*.{ts,tsx}";
-@source "../../../apps/web/{app,components,lib}/**/*.{ts,tsx}";
-@source "../../../apps/admin/{app,components,lib}/**/*.{ts,tsx}";
+@source "../../../apps/web/{app,src}/**/*.{ts,tsx}";
+@source "../../../apps/admin/{app,src}/**/*.{ts,tsx}";
 @source "../../../apps/storybook/stories/**/*.{ts,tsx}";
 
 @custom-variant dark (&:is(.dark *));

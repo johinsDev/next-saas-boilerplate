@@ -9,3 +9,8 @@ export {
   isStaffRole,
   rolesAtOrAbove,
 } from "./roles";
+export {
+  decideAccess,
+  type GuardDecision,
+  type GuardInput,
+} from "./access";

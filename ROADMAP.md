@@ -8,9 +8,21 @@ Nothing here is started — this is the list, not a status board.
 `apps/api` is here. The rest are not, and this is the first gap because it is what makes
 everything else demonstrable.
 
-- **`apps/web`** — Next.js 16, `cacheComponents: true`, calling `packages/services`
-  directly. See `.claude/skills/architecture-guard`.
-- **`apps/admin`** — same, behind the role guard in `@saas/auth`.
+- ~~**`apps/web`**~~ — done as a **reference app**, not a finished product. Next 16 with
+  `cacheComponents` and `partialPrefetching`, public by default: the proxy allow-lists the
+  one gated segment instead of guarding everything, and the header's account slot renders
+  for signed-in and anonymous visitors alike. Still needs the real product surface, i18n,
+  and the realtime wiring below.
+- ~~**`apps/admin`**~~ — done, same caveat. Staff-only: the proxy guards everything and
+  names its exceptions, and `verifyAuth()` reads the membership row because a cookie is
+  not a role. Still needs the actual admin screens.
+
+Both are small on purpose. Their job is to be the shape every screen copies —
+synchronous pages, `use cache` in the app rather than in `packages/services`,
+`'use cache: private'` for the session read and nothing else, one Suspense boundary per
+data-dependent section with a height-matched skeleton beside its component. Read
+`.claude/skills/nextjs-app-architecture` and the amendment in `architecture-guard` before
+adding a screen.
 - ~~**`apps/api`**~~ — done. Hono on Cloudflare Workers, exporting `AppType`. Still needs
   auth middleware, rate limiting and the observability wiring the packages already provide.
 - **`apps/web` realtime wiring** — `@saas/realtime` and the `partykit/` server are both

@@ -312,6 +312,12 @@
       "skillPath": "skills/next-intl-add-language/SKILL.md",
       "computedHash": "6b30075c5f43a4498782729f129c513ca28db37d93032a81a07e444d4db575c5"
     },
+    "nextjs-app-architecture": {
+      "source": "aurorascharff/nextjs-app-architecture-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "e4ef5be1248ade8556e6c7abc713b370b9f22ca0b492d4b3059c8af0e0528ed4"
+    },
     "nuqs": {
       "source": "pproenca/dot-skills",
       "sourceType": "github",

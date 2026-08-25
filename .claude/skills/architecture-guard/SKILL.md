@@ -8,6 +8,56 @@ description: The data-access rule for the app — web and admin call packages/se
 This is the authority on data access in the app. Where a ported `loyalty-app` skill
 disagrees with this file, this file wins.
 
+## Amendment to `nextjs-app-architecture`
+
+We vendor `nextjs-app-architecture` (MIT, `aurorascharff/nextjs-app-architecture-skill`)
+and follow it for rendering: synchronous pages, `use cache`, Suspense placement, skeleton
+co-location, prefetch tiers. **Follow it, with one change.**
+
+Its reference apps call the ORM straight from `<domain>-queries.ts`. They can: they have
+exactly one consumer. We have three — `apps/web`, `apps/admin`, and `apps/api` for mobile
+— so domain logic lives in `packages/services` and a query calls the **service**, never
+drizzle.
+
+| Belongs in `packages/services` | Belongs in `<domain>-queries.ts` |
+|---|---|
+| Rows (`repository.ts`), rules (`service.ts`), `ServiceError` | `import "server-only"` |
+| Nothing from `next/*` | `'use cache'`, `cacheTag`, `cacheLife` |
+| Runs in a Hono Worker and in a plain `vitest` run | The uncached-wrapper / cached-inner split |
+
+**Cache directives never cross into `packages/services`.** `use cache` is a Next compiler
+construct: put it in the shared package and the same function silently stops caching when
+the Worker calls it — one function, two behaviours, and the difference only shows up in
+production. This is the same reason `server-only` lives one layer up.
+
+### The uncached wrapper, the cached inner
+
+You cannot call `cookies()` inside `'use cache'`. So the exported wrapper reads the request
+and stays uncached; the unexported inner takes the resolved values as arguments, which makes
+them part of the cache key.
+
+```ts
+// apps/admin/src/features/members/members-queries.ts
+import "server-only";
+import { cacheLife, cacheTag } from "next/cache";
+import { listMembers } from "@saas/services/organizations";
+
+export async function getMembers() {
+  return getMembersForOrg(await getViewerOrgId());
+}
+
+async function getMembersForOrg(organizationId: string) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("members", `members:${organizationId}`);
+  return listMembers({ organizationId });
+}
+```
+
+**`'use cache: private'` is for reading the session, and nothing else.** Everything else
+per-viewer is plain `'use cache'` keyed by an argument — the privacy comes from the key,
+not from the directive.
+
 ## The one rule
 
 ```
