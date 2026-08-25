@@ -89,11 +89,30 @@ export interface OutboxProviderConfig {
   db: EmailOutboxDb;
 }
 
+/**
+ * A handle on queued work — the shape every queue returns and the only part of
+ * one this package needs to know about.
+ */
+export interface QueuedDispatch {
+  id: string;
+}
+
+export interface QueueProviderConfig {
+  provider: "queue";
+  /**
+   * Hands the rendered message to the background queue. Injected by the app's
+   * bootstrap, the same way the outbox transport takes its `db`, so this
+   * package never depends on a particular queue vendor.
+   */
+  dispatch: (message: EmailMessageData) => Promise<QueuedDispatch>;
+}
+
 export type ProviderConfig =
   | ResendProviderConfig
   | LogProviderConfig
   | FolderProviderConfig
-  | OutboxProviderConfig;
+  | OutboxProviderConfig
+  | QueueProviderConfig;
 
 /**
  * Structural type of the slice of `@saas/log`'s `Logger` we use.

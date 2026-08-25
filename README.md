@@ -120,6 +120,70 @@ of the weight:
 `.claude/skills/nextjs-app-architecture` is the full version, with the amendment in
 `architecture-guard` for where we differ from it.
 
+## Background work
+
+`packages/jobs` is a Trigger.dev v4 project: `trigger.config.ts`, one file per task under
+`trigger/`, and its own bootstrap of the shared packages (`email.ts`, `push.ts`, `sms.ts`,
+`realtime.ts`) so a task uses the same ports the apps do.
+
+```bash
+bun run --cwd packages/jobs dev      # local worker, picks up task changes
+bun run --cwd packages/jobs deploy
+```
+
+**Email goes through the queue in production and stays local in development.** The apps
+select the `queue` provider when `TRIGGER_SECRET_KEY` is present and `folder` when it is
+not, so a fresh clone can sign in with `bun run dev` and nothing else running — needing a
+queue to read your own magic link is how a boilerplate gets abandoned in the first ten
+minutes.
+
+The queue is a **transport behind the existing port**, not a parallel path:
+
+```ts
+new EmailManager({
+  default: queued ? "queue" : "folder",
+  mailers: {
+    queue: { provider: "queue", dispatch },   // hands the message to a task
+    folder: { provider: "folder", outputDir: ".email-previews" },
+  },
+});
+```
+
+`dispatch` is injected, the same way the outbox transport takes its `db`, so
+`@saas/email` never depends on a queue vendor — and the transport is testable with no
+queue running.
+
+### Triggering a task from an app
+
+The task is a **type-only** import and the id travels as a string. Same bargain as
+`hc<AppType>`: the payload is type-checked at compile time, and none of `@saas/jobs` —
+its database, its mailer, every other task — reaches the app's bundle.
+
+```ts
+import { tasks } from "@trigger.dev/sdk/v3";
+import type { sendEmailTask } from "@saas/jobs/trigger/send-email";
+
+await tasks.trigger<typeof sendEmailTask>("send-email", message);
+```
+
+### Two shapes of task, and when to use which
+
+- **`send-email`** takes an already-rendered message. One task covers every email in
+  every app: selecting the `queue` provider is the only change. Rendering stays on the
+  request path, which costs milliseconds and keeps the queue ignorant of templates.
+- **`send-magic-link-email`** takes the *inputs* and renders inside the task. Reach for
+  this shape only when the rendering itself is worth moving off the request.
+
+### Schedules
+
+`schedules.task` with a `cron` field. `prune-outboxes` runs at `0 4 * * *` and trims the
+email, SMS and push outboxes — the tables every provider adapter writes to in preview.
+
+Six Trigger skills are installed (`trigger-tasks`, `trigger-setup`, `trigger-realtime`,
+`trigger-cost-savings`, and the two chat-agent ones). That is everything
+`triggerdotdev/skills` publishes; the `trigger-dev-tasks` skill in their main repo is for
+working on Trigger itself, not on an app that uses it.
+
 ## Skills
 
 - `.agents/skills/` — 108 installed from `skills-lock.json`, not committed. Restore with
