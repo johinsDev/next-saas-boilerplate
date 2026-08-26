@@ -2,12 +2,22 @@
 
 ## Read first
 
+- **`.claude/skills/hard-won`** — bugs that actually reached a running app on this stack,
+  each with the rule that prevents the next one of its shape: blind tests, guards that
+  only hide, barrel imports in client components, storage keys as attacker input,
+  timestamp units, and the ten rounds it took to learn that bounding a box without a
+  scrollport hides content. **Read it before writing a guard, a test fixture, or any CSS
+  that caps a height.**
 - **`.claude/skills/architecture-guard`** — where data access lives. It is the authority
   and it overrides any skill that disagrees.
 - **`.claude/skills/nextjs-app-architecture`** — how a Next 16 screen is built: synchronous
   pages, `use cache`, Suspense placement, prefetch tiers. Vendored (MIT); read the
   amendment in `architecture-guard`, which says where we differ.
 - **`.claude/skills/features`** — how a feature is laid out.
+- **`.claude/skills/detail-screens`** — the detail screen: one component behind two URLs
+  (intercepting routes), capability groups instead of a permissions matrix, the
+  confirmation ladder, presigned avatar upload, the activity trail, and the layout rules
+  that came out of `hard-won`.
 - **[ROADMAP.md](./ROADMAP.md)** — what is deliberately missing. Check it before building
   something that is already planned in a particular shape.
 
