@@ -63,6 +63,8 @@ next-env.d.ts
 !.claude/skills/data-table/**
 !.claude/skills/date-fns
 !.claude/skills/date-fns/**
+!.claude/skills/detail-screens
+!.claude/skills/detail-screens/**
 !.claude/skills/drizzle
 !.claude/skills/drizzle/**
 !.claude/skills/email
@@ -75,6 +77,8 @@ next-env.d.ts
 !.claude/skills/features/**
 !.claude/skills/file-upload
 !.claude/skills/file-upload/**
+!.claude/skills/hard-won
+!.claude/skills/hard-won/**
 !.claude/skills/icons
 !.claude/skills/icons/**
 !.claude/skills/image-loader
