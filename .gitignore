@@ -133,3 +133,6 @@ apps/*/CLAUDE.md
 
 # astro build cache
 .astro
+
+# expo
+.expo
