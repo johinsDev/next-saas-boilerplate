@@ -2,14 +2,14 @@ import { jwtVerify } from "jose";
 
 /**
  * HS256 ticket verification. The server (Next via `@saas/realtime`)
- * signs tickets that include `{ sub: customerId, room: roomId, exp }`.
+ * signs tickets that include `{ sub: userId, room: roomId, exp }`.
  * The party rejects the connection unless:
  *
  *   - signature is valid against `REALTIME_AUTH_SECRET`
  *   - `payload.room === expectedRoom` (this party's room id)
  *   - `exp` hasn't passed (jose enforces this automatically)
  *
- * Returns `customerId` on success; throws on any failure.
+ * Returns `userId` on success; throws on any failure.
  */
 export async function verifyTicket(
   token: string,
@@ -23,6 +23,19 @@ export async function verifyTicket(
   }
   if (typeof payload.sub !== "string" || payload.sub.length === 0) {
     throw new Error("ticket missing subject (user id)");
+  }
+  // A `user:<id>` room is that user's private channel, so the ticket has to
+  // name them. Matching the room alone is not enough: a ticket minted with
+  // someone else's subject is still validly signed, and accepting it would
+  // subscribe the bearer to a stranger's events. `@saas/realtime`'s
+  // `signTicket` refuses to mint one; this is the half that refuses to accept
+  // one, so a caller that bypasses signTicket still cannot get in.
+  const USER_PREFIX = "user:";
+  if (expectedRoom.startsWith(USER_PREFIX)) {
+    const roomUserId = expectedRoom.slice(USER_PREFIX.length);
+    if (payload.sub !== roomUserId) {
+      throw new Error("ticket subject does not own this user room");
+    }
   }
   return payload.sub;
 }

@@ -6,7 +6,7 @@ import { jwtVerify } from "jose";
  * there's a single source of truth for the ticket format, and the
  * PartyKit project pulls it via workspace.
  *
- * Returns the customer id (the JWT subject) on success; throws on
+ * Returns the user id (the JWT subject) on success; throws on
  * any failure (bad signature, room mismatch, expired, malformed).
  */
 export async function verifyTicket(
@@ -22,7 +22,20 @@ export async function verifyTicket(
     );
   }
   if (typeof payload.sub !== "string" || payload.sub.length === 0) {
-    throw new Error("ticket missing subject (customer id)");
+    throw new Error("ticket missing subject (user id)");
+  }
+  // A `user:<id>` room is that user's private channel, so the ticket has to
+  // name them. Matching the room alone is not enough: a ticket minted with
+  // someone else's subject is still validly signed, and accepting it would
+  // subscribe the bearer to a stranger's events. `@saas/realtime`'s
+  // `signTicket` refuses to mint one; this is the half that refuses to accept
+  // one, so a caller that bypasses signTicket still cannot get in.
+  const USER_PREFIX = "user:";
+  if (expectedRoom.startsWith(USER_PREFIX)) {
+    const roomUserId = expectedRoom.slice(USER_PREFIX.length);
+    if (payload.sub !== roomUserId) {
+      throw new Error("ticket subject does not own this user room");
+    }
   }
   return payload.sub;
 }

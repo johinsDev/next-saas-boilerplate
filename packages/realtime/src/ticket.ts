@@ -1,6 +1,6 @@
 import { SignJWT } from "jose";
 
-import type { RealtimeTicket, RoomName } from "./types";
+import { parseRoom, type RealtimeTicket, type RoomName } from "./types";
 
 const DEFAULT_TTL_SECONDS = 300; // 5 minutes
 
@@ -9,10 +9,20 @@ const DEFAULT_TTL_SECONDS = 300; // 5 minutes
  * The party verifies the same signature with the same secret and
  * confirms the room id matches.
  *
- * - `sub` = the entity authorized for this room: a customer id for
- *   `customer:` rooms, a staff user id for `org:` rooms
+ * - `sub` = the entity authorized for this room
  * - `room` = the room id the ticket grants access to (one ticket = one room)
  * - `exp` = signTime + ttl
+ *
+ * **A `user:<id>` ticket must be issued to that same user.** The party checks
+ * that the ticket names its room, but a ticket naming someone else's room is
+ * still validly signed — so without this check any caller that gets a subject
+ * and a room from two different places hands out a subscription to a stranger's
+ * private channel, and every event published there leaks. Enforced here rather
+ * than left to callers because there is no legitimate exception to it.
+ *
+ * `organization:` rooms cannot be checked here: membership lives in the
+ * database and this package has no access to it. Whoever issues those tickets
+ * owns that check.
  *
  * Keep `ttlSeconds` short — the client auto-refreshes before expiry
  * via the React hook, so there's no UX cost to a 5-minute TTL.
@@ -26,6 +36,13 @@ export async function signTicket(params: {
   const { subject, roomId, secret, ttlSeconds = DEFAULT_TTL_SECONDS } = params;
   if (!secret) throw new Error("signTicket: secret is required");
   if (!subject) throw new Error("signTicket: subject is required");
+
+  const { kind, body } = parseRoom(roomId);
+  if (kind === "user" && body !== subject) {
+    throw new Error(
+      `signTicket: a user room may only be granted to its own user (room ${roomId}, subject ${subject})`,
+    );
+  }
 
   const key = new TextEncoder().encode(secret);
   const nowSeconds = Math.floor(Date.now() / 1000);

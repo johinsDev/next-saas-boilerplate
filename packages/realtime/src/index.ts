@@ -8,11 +8,12 @@ export { signHmac, signTicket } from "./ticket";
 export { verifyHmac, verifyTicket } from "./verify";
 export {
   parseRoom,
-  type ChatRoom,
-  type CustomerRoom,
-  type OrgRoom,
+  PARTY_KINDS,
+  type OrganizationRoom,
   type ParsedRoom,
+  type PartyKind,
   type RealtimeEvent,
   type RealtimeTicket,
   type RoomName,
+  type UserRoom,
 } from "./types";

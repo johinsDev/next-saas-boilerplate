@@ -15,7 +15,7 @@ import type { RealtimeEvent } from "./_shared/types";
  *   4. Every connected websocket receives the JSON event
  *
  * Client-to-party flow (opening a connection):
- *   1. Client calls tRPC `realtime.issueTicket` and gets a short-lived JWT
+ *   1. Client asks the app for a ticket and gets a short-lived JWT
  *   2. Client connects with `?token=<jwt>` query param
  *   3. `onBeforeConnect` verifies the ticket + asserts the room matches
  *   4. On success the connection joins the room; `onConnect` greets it
@@ -24,7 +24,7 @@ import type { RealtimeEvent } from "./_shared/types";
  * events. The card / dashboard reads only. Chat / collaborative use
  * cases live in different party classes (see SKILL.md).
  */
-export default class CustomerParty implements Party.Server {
+export default class UserParty implements Party.Server {
   constructor(readonly room: Party.Room) {}
 
   static async onBeforeConnect(
@@ -43,7 +43,7 @@ export default class CustomerParty implements Party.Server {
     }
     try {
       // The ticket is signed against the full `user:<id>` room name
-      // (see RealtimeService.issueTicket). `lobby.id` is just the
+      // (whoever issues tickets signs the full name). `lobby.id` is just the
       // <id> portion — PartyKit splits the kind off into the URL path.
       // Reconstruct the canonical room name before verifying.
       await verifyTicket(token, secret, `user:${lobby.id}`);
