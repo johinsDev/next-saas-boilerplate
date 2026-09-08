@@ -9,6 +9,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import {
   admin,
+  bearer,
   magicLink,
   organization,
   phoneNumber,
@@ -63,6 +64,31 @@ export type CreateAuthOptions = {
    * at the wrong app.
    */
   baseURL?: string;
+  /**
+   * Accept `Authorization: Bearer <session-token>` in addition to the session
+   * cookie. Off by default: only an app that serves a non-browser client needs
+   * it, and the admin does not. React Native has no cookie jar, so whichever
+   * app answers the mobile app's auth calls must turn this on.
+   */
+  bearerEnabled?: boolean;
+  /**
+   * Extra Better Auth plugins, appended after the built-in ones.
+   *
+   * The escape hatch exists for plugins this package must not depend on.
+   * `@better-auth/expo` is the case that forced it: its server export peer-
+   * depends on five `expo-*` packages, so importing it here would make web,
+   * admin and the Cloudflare Worker all carry React Native dependencies to
+   * satisfy resolution. The Expo app owns that dependency and passes the
+   * plugin in.
+   */
+  plugins?: BetterAuthOptions["plugins"];
+  /**
+   * Extra trusted origins, appended to the built-in list. A native app's deep
+   * link scheme (`mazo://`) goes here — Better Auth rejects an OAuth callback
+   * whose origin it does not know, and a custom scheme is never in the list by
+   * default.
+   */
+  trustedOrigins?: readonly string[];
 };
 
 const PHONE_OTP_WINDOW_SECONDS = 30 * 60;
@@ -85,11 +111,14 @@ const vercelDeploymentUrl = process.env.VERCEL_URL
 
 const vercelUrl = vercelProductionUrl ?? vercelDeploymentUrl;
 
+// Ports match this repo's apps: web on 3000, admin on 3001. (They were 3002 /
+// 3003 — the source app's ports — which made every localhost fallback here
+// point at something that isn't running.)
 const defaultBaseURL =
-  process.env.BETTER_AUTH_URL ?? vercelUrl ?? "http://localhost:3003";
+  process.env.BETTER_AUTH_URL ?? vercelUrl ?? "http://localhost:3001";
 
 const webURL =
-  process.env.NEXT_PUBLIC_APP_URL ?? vercelUrl ?? "http://localhost:3002";
+  process.env.NEXT_PUBLIC_APP_URL ?? vercelUrl ?? "http://localhost:3000";
 
 // Extra trusted origins (CSV) for the standalone Worker issuer: the FE
 // subdomains it serves (admin./app.t4diverclub.app, per-PR preview hosts). Empty
@@ -163,12 +192,13 @@ export function createAuth(
     trustedOrigins: [
       baseURL,
       webURL,
-      "http://localhost:3002",
-      "http://localhost:3003",
+      "http://localhost:3000",
+      "http://localhost:3001",
       ...(vercelProductionUrl ? [vercelProductionUrl] : []),
       ...(vercelDeploymentUrl ? [vercelDeploymentUrl] : []),
       "https://*.vercel.app",
       ...extraTrustedOrigins,
+      ...(options.trustedOrigins ?? []),
     ],
     // Cross-subdomain session cookie for the standalone-Worker issuer, plus the
     // per-environment cookie name prefix. Omitted entirely when neither
@@ -313,6 +343,12 @@ export function createAuth(
             }),
           ]
         : []),
+      // Token transport for clients with no cookie jar (the Expo app). It
+      // accepts a session token the holder already has, so it adds no new
+      // credential — but it is off unless an app asks for it, because surface
+      // nobody uses is still surface.
+      ...(options.bearerEnabled ? [bearer()] : []),
+      ...(options.plugins ?? []),
     ],
   });
 }
