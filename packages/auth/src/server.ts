@@ -3,6 +3,7 @@ import {
   getPrimaryOrganizationId,
   recordAudit,
   schema,
+  type Database,
 } from "@saas/db";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -321,6 +322,19 @@ export function createAuth(
               expiresIn: 300,
               disableSignUp: true,
               sendMagicLink: async ({ email, url }) => {
+                // Do not email an address that has no account. With
+                // `disableSignUp` the link would be unredeemable anyway, so the
+                // only thing sending accomplishes is letting anyone make this
+                // server mail arbitrary strangers — spam from your domain, on
+                // your sending quota, at no cost to the abuser. Better Auth's
+                // IP rate limit does not cover it: a caller rotating addresses
+                // stays under any per-IP cap, and one rotating IPs defeats it
+                // outright.
+                //
+                // The HTTP response is unchanged — still `{status: true}`
+                // whether or not the account exists — so this closes the relay
+                // without opening account enumeration.
+                if (!(await accountExists(db, email))) return;
                 await deps.sendMagicLink!({ email, url });
               },
             }),
@@ -353,6 +367,26 @@ export function createAuth(
   });
 }
 
+
+/**
+ * Does a user row exist for this email?
+ *
+ * **A send-side guard, never an authorization decision.** Anything that gates
+ * access reads the session; this only decides whether an email is worth
+ * sending. Takes its database as an argument so it is testable without one,
+ * per the convention in `packages/services`.
+ */
+export async function accountExists(
+  database: Database,
+  email: string,
+): Promise<boolean> {
+  const [row] = await database
+    .select({ id: schema.user.id })
+    .from(schema.user)
+    .where(eq(schema.user.email, email))
+    .limit(1);
+  return !!row;
+}
 
 // Hard cap per phone number across IPs/clients. Better Auth's rate limit
 // is keyed on IP, so a bot rotating proxies could still burn through OTPs
