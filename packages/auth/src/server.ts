@@ -280,7 +280,7 @@ export function createAuth(
           after: async (createdSession) => {
             if (createdSession.impersonatedBy) return;
             const organizationId = await getPrimaryOrganizationId();
-            await recordAudit({
+            await recordAudit(db, {
               organizationId,
               actorUserId: createdSession.userId,
               targetUserId: createdSession.userId,
@@ -298,7 +298,7 @@ export function createAuth(
         const sessionUser = ctx.context.session?.user;
         if (!sessionUser) return;
         const organizationId = await getPrimaryOrganizationId();
-        await recordAudit({
+        await recordAudit(db, {
           organizationId,
           actorUserId: sessionUser.id,
           targetUserId: sessionUser.id,

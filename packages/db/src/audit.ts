@@ -1,4 +1,4 @@
-import { db } from "./client";
+import type { Database } from "./client";
 import * as schema from "./schema";
 import type { AuditType } from "./schema";
 
@@ -17,12 +17,21 @@ export type RecordAuditInput = {
 /**
  * Append a row to the `audit_log`. Best-effort and never throws — auditing must
  * not block the action it records (a failed insert is logged, not propagated).
- * Used by the Better Auth session hooks (login/logout) and the employees
- * service (invite/role/disable/email/impersonation/…).
+ * Used by the Better Auth session hooks (login/logout) and, downstream, by
+ * whatever records domain events.
+ *
+ * Takes its database rather than reaching for the module singleton. Cloudflare
+ * Workers bind an I/O object to the request that created it, so a client shared
+ * across concurrent requests is cancelled mid-flight — a singleton here works
+ * in Node and in `wrangler dev`, then fails in production the first time a
+ * second request reuses it. The same reason `createDb` accepts a config.
  */
-export async function recordAudit(entry: RecordAuditInput): Promise<void> {
+export async function recordAudit(
+  database: Database,
+  entry: RecordAuditInput,
+): Promise<void> {
   try {
-    await db.insert(schema.auditLog).values({
+    await database.insert(schema.auditLog).values({
       organizationId: entry.organizationId ?? null,
       actorUserId: entry.actorUserId ?? null,
       targetUserId: entry.targetUserId ?? null,

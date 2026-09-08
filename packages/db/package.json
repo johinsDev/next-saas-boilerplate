@@ -17,6 +17,8 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "lint": "oxlint src",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .turbo node_modules"
   },
@@ -29,6 +31,8 @@
     "@saas/tsconfig": "workspace:*",
     "drizzle-kit": "^0.28.0",
     "oxlint": "^0.15.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "@saas/vitest-config": "workspace:*",
+    "vitest": "^2.1.0"
   }
 }
