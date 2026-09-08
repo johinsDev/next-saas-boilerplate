@@ -1,6 +1,7 @@
+import * as Sentry from "@sentry/cloudflare";
 import { Hono } from "hono";
 import { createDb } from "@saas/db";
-import type { Env } from "./lib/env";
+import type { Bindings, Env } from "./lib/env";
 import { toHttpError } from "./lib/errors";
 import { organizations } from "./routes/organizations";
 
@@ -49,4 +50,24 @@ const routes = app
 
 export type AppType = typeof routes;
 
-export default app;
+/**
+ * Error reporting.
+ *
+ * `@sentry/cloudflare`, not `@sentry/node`: a Worker has no process, and the
+ * wrapper is what gives Sentry the request context and the `waitUntil` it needs
+ * to flush before the isolate is torn down. Reporting from a handler without it
+ * loses events whenever the response finishes first.
+ *
+ * Inert without `SENTRY_DSN`, so a clone with no Sentry account deploys and
+ * runs unchanged.
+ */
+export default Sentry.withSentry(
+  (env: Bindings) => ({
+    dsn: env.SENTRY_DSN ?? "",
+    enabled: !!env.SENTRY_DSN,
+    environment: env.ENVIRONMENT,
+    tracesSampleRate: env.ENVIRONMENT === "production" ? 0.1 : 1,
+    sendDefaultPii: false,
+  }),
+  app,
+);

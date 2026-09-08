@@ -9,6 +9,8 @@ export type Bindings = {
   ENVIRONMENT: string;
   DATABASE_URL: string;
   DATABASE_AUTH_TOKEN?: string;
+  /** Unset → Sentry is inert. See `src/index.ts`. */
+  SENTRY_DSN?: string;
 };
 
 /** What each request carries once the middleware has built it. */

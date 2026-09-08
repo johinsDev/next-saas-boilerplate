@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
@@ -19,6 +21,7 @@
     "@saas/db": "workspace:*",
     "@saas/log": "workspace:*",
     "@saas/services": "workspace:*",
+    "@sentry/cloudflare": "^10.73.0",
     "hono": "^4.6.0",
     "zod": "^4.0.0"
   },
