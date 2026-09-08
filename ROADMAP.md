@@ -27,21 +27,8 @@ adding a screen.
   auth middleware, rate limiting and the observability wiring the packages already provide.
 - **`apps/web` realtime wiring** — `@saas/realtime` and the `partykit/` server are both
   here; nothing connects them yet because there is no client to connect.
-- **Astro landing** — static marketing site, its own deploy, sharing only the design
-  tokens. Deliberately not Next: a landing page should not carry a React runtime.
-
-**The app-level libraries arrive with the apps, not before.** `zustand`, `nuqs`,
-`@tanstack/react-query`, `react-hook-form`, `zod` and `motion` are dependencies of a
-Next.js app, not packages of their own — wrapping each in a `packages/*` would add a layer
-that exists only to be maintained. Each already has a skill under `.claude/skills/`, so
-the conventions are settled before the first line is written. Same for SEO: it is metadata
-and route conventions inside `apps/web`, not something to abstract.
-
-## 2. Billing and entitlements
-
-The largest missing piece, and the one that makes it a SaaS boilerplate rather than an
-app skeleton.
-
+- ~~**Astro landing**~~ — built as `apps/landing`. Static, zero JavaScript, shares
+  `@saas/design-tokens` and nothing else. Still needs real copy and a deploy target.
 - **Multi-provider subscriptions.** One `BillingProvider` port with Stripe, Polar and
   Mercado Pago adapters — the same shape every other package here uses (see
   `@saas/storage`, `@saas/sms`). Mercado Pago matters for LatAm and is usually the
@@ -64,13 +51,13 @@ Proven in `loyalty-app`, worth lifting once there are apps to attach them to.
   bootstrap.
 - **CI/CD** — preview environments per PR: preview database, preview Worker, aliased
   domains, and teardown on merge.
-- **Docker** for local services (libSQL, Redis) and for the API image.
+- ~~**Docker** for local services (libSQL, Redis)~~ — `docker-compose.yml`, plus
+  `bun run dev:services`. The API image is still not built.
 - **Trigger.dev** — `@saas/jobs` is here with the generic tasks; the deploy pipeline
   and per-environment projects are not.
-- **Sentry** — nothing here yet, not even a package. In the source application it is
-  wired per app (`@sentry/nextjs`, `@sentry/cloudflare`) rather than abstracted, which is
-  the right call: the SDKs differ enough per runtime that a shared port would only get in
-  the way. There is a `sentry` skill covering the setup.
+- ~~**Sentry**~~ — wired per app (`@sentry/nextjs` in web/admin, `@sentry/cloudflare`
+  in the Worker), inert until a DSN exists. The Sentry project itself still does not.
+  Costs the Worker +103 KiB gzip.
 - **Better Stack** — `@saas/log` has the transport; the project and the dashboards do not
   exist.
 
@@ -87,10 +74,9 @@ repo does not have.
 
 ## 5. Clients beyond the browser
 
-- **Expo mobile app** — shares `@saas/auth` (bearer + `expoClient`) and reaches the API
-  through `hc<AppType>`. **This belongs here**: it consumes the same services and the
-  same contract, and a SaaS boilerplate without mobile forces the decision later, when
-  it is expensive.
+- ~~**Expo mobile app**~~ — `apps/mobile` exists: Expo Router, theming from
+  `@saas/design-tokens`, Metro configured for the workspace. Still needs
+  `@better-auth/expo`, the Hono client, and screens.
 - **Tauri desktop app** — **this does not belong here.** It shares almost nothing with
   the web stack, it drags in a Rust toolchain that every contributor then has to
   install, and most SaaS products never ship one. It should be its own template that
@@ -116,10 +102,10 @@ repo does not have.
 
 ## 7. Boilerplate hygiene
 
-- **Database migrations.** Dropped on extraction, because they encoded the loyalty
-  domain. Generate a fresh initial migration from the current schema.
-- **A seed** that creates an organization, an owner, and settings.
+- ~~**Database migrations.**~~ — `packages/db/migrations/0000_initial_schema.sql`.
+- ~~**A seed**~~ — `packages/db/src/seed.ts`. Two organizations on purpose: a single-org
+  seed lets every multi-tenancy bug through untouched.
 - **`packages/i18n`** — next-intl for web, the same catalogues for mobile.
-- **`packages/design-tokens`** in plain JS, because React Native cannot read CSS.
-  `@saas/ui` is web-only: tokens are shared, components are not.
+- ~~**`packages/design-tokens`**~~ — built, and tested against `globals.css` so the two
+  cannot drift.
 - **E2E tests** — Playwright, the `apps/e2e` shape from `loyalty-app`.
