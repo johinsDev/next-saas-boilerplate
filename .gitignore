@@ -130,3 +130,6 @@ apps/*/CLAUDE.md
 
 # local email transport writes previews here instead of sending
 .email-previews
+
+# astro build cache
+.astro

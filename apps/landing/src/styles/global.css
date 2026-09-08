@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+/* The colour custom properties are NOT written here. They are emitted by
+   BaseLayout from `@saas/design-tokens`, which mirrors the app stylesheet, so
+   the landing page cannot drift from the product it advertises. Only the
+   mapping into Tailwind's namespace lives here. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}

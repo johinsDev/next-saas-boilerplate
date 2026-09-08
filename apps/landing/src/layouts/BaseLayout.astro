@@ -1,0 +1,46 @@
+---
+import { darkColors, lightColors } from "@saas/design-tokens";
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+
+/**
+ * The theme is emitted from `@saas/design-tokens` rather than written here.
+ *
+ * A marketing page that looks like a different product than the app it sells
+ * is a small, constant tax, and it happens by drift — someone tunes a colour in
+ * the app and nobody thinks to touch the landing page. Generating the custom
+ * properties from the shared tokens means there is nothing here to forget.
+ */
+const declarations = (tokens: Record<string, string>) =>
+  Object.entries(tokens)
+    .map(([name, value]) => `--${name}:${value};`)
+    .join("");
+
+const theme = `:root{${declarations(lightColors)}}
+@media (prefers-color-scheme: dark){:root:not(.light){${declarations(darkColors)}}}
+.dark{${declarations(darkColors)}}`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <style is:global set:html={theme}></style>
+  </head>
+  <body class="min-h-dvh antialiased">
+    <slot />
+  </body>
+</html>

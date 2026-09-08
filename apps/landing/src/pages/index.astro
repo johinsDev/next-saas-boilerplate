@@ -1,0 +1,47 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const appUrl = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:3000";
+---
+
+<BaseLayout
+  title="Boilerplate"
+  description="The marketing shell. Replace this copy with the product's."
+>
+  <main class="mx-auto flex min-h-dvh max-w-3xl flex-col justify-center gap-8 px-6 py-24">
+    <div class="flex flex-col gap-4">
+      <p class="text-sm font-medium tracking-wide text-muted-foreground uppercase">
+        Landing shell
+      </p>
+      <h1 class="text-5xl font-semibold tracking-tight text-balance">
+        The marketing site lives here, on its own deploy.
+      </h1>
+      <p class="max-w-prose text-lg text-muted-foreground text-pretty">
+        Astro, static, zero JavaScript unless a component asks for it. It shares
+        design tokens with the product and nothing else, so the two cannot drift
+        apart visually — and the page stays fast on a phone over mobile data.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <a
+        href={appUrl}
+        class="rounded-[--radius] bg-primary px-5 py-2.5 font-medium text-primary-foreground"
+      >
+        Open the app
+      </a>
+      <a
+        href="https://docs.astro.build"
+        class="rounded-[--radius] border border-border px-5 py-2.5 font-medium"
+      >
+        Astro docs
+      </a>
+    </div>
+
+    <p class="text-sm text-muted-foreground">
+      The colours above come from <code>@saas/design-tokens</code>, which mirrors
+      <code>packages/ui/styles/globals.css</code>. Change the theme once and this
+      page follows.
+    </p>
+  </main>
+</BaseLayout>
