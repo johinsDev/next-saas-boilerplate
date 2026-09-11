@@ -187,6 +187,49 @@ These exceptions are documented at the top of each component file.
 
 ---
 
+## Menus and popovers
+
+Two surfaces, and they are not interchangeable:
+
+| Need | Component |
+| --- | --- |
+| A **menu** a control opens — an account menu, a switcher, "more sections" | `MorphPopover` (`packages/ui/src/components/motion/popover-morph.tsx`) |
+| A popover another component owns — `DatePicker`, `ColorPicker`, the rich-text toolbar | the Base UI `Popover` those are built on |
+
+`MorphPopover`, from [beui.dev](https://beui.dev/components/motion/popover),
+clips its panel back to the corner nearest the trigger and unclips it as one
+piece, so a menu reads as growing out of the control that opened it instead of
+fading in beside it.
+
+```tsx
+<MorphPopover open={open} onOpenChange={setOpen} className="w-full">
+  <MorphPopoverTrigger>
+    <button type="button" className="…">{label}</button>
+  </MorphPopoverTrigger>
+  <MorphPopoverContent side="top" align="center" radius={18} wrapperClassName={LIFT}>
+    {items}
+  </MorphPopoverContent>
+</MorphPopover>
+```
+
+Four things to know before using it:
+
+- **The shadow goes on the wrapper** (`wrapperClassName`), as a `drop-shadow`
+  filter. The panel is clipped while it opens, and a `box-shadow` on it is
+  clipped away with it.
+- **The corner is a number** (`radius`), not a class: the morph clips to it.
+- **The root is `inline-flex`.** Pass `className="w-full"` (or a height) when the
+  trigger fills its row, or the trigger collapses.
+- **Placement is pure and tested** — `popover-place.ts`: `side` is
+  top/bottom/left/right, `align` start/center/end, and the panel is clamped into
+  the viewport with an 8 px margin rather than flipped. A panel wider than the
+  screen is pinned to the near edge: one edge cut beats half of it hanging off
+  each side.
+
+A trigger inside a dialog must measure again on open
+(`usePopoverPortalPosition(..., remeasureOn)`): the dialog scales in, and a
+transform fires no ResizeObserver.
+
 ## Picking a date
 
 Two components, and picking the wrong one is the usual mistake:

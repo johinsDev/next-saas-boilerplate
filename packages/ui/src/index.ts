@@ -135,4 +135,13 @@ export {
  */
 export { Input as MotionInput, type InputProps as MotionInputProps } from "./components/motion/input";
 export { NumberTicker, type NumberTickerProps } from "./components/motion/number-ticker";
+export {
+  MorphPopover,
+  MorphPopoverContent,
+  MorphPopoverTrigger,
+  type MorphPopoverContentProps,
+  type MorphPopoverProps,
+} from "./components/motion/popover-morph";
+export type { PopoverAlign, PopoverSide } from "./components/motion/popover-place";
+export { usePopoverPortalPosition } from "./components/motion/popover-position";
 export { ThemeToggle } from "./components/motion/theme-toggle";
